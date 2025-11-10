@@ -20,6 +20,18 @@ from .translation_memory import (
     SuggestedGlossaryTerm,
 )
 
+# Advanced: Semantic memory with embeddings
+try:
+    from .semantic_memory import (
+        SemanticTranslationMemory,
+        SemanticEntry,
+        SimilarTranslation,
+    )
+
+    _SEMANTIC_AVAILABLE = True
+except ImportError:
+    _SEMANTIC_AVAILABLE = False
+
 # Core components
 from .glossary import (
     GlossaryEntry,
@@ -81,6 +93,16 @@ __all__ = [
     "select_glossary_terms",
     "extract_protected_tokens",
 ]
+
+# Add semantic memory to __all__ if available
+if _SEMANTIC_AVAILABLE:
+    __all__.extend(
+        [
+            "SemanticTranslationMemory",
+            "SemanticEntry",
+            "SimilarTranslation",
+        ]
+    )
 
 # Add advanced components to __all__ if available
 if _ADVANCED_AVAILABLE:
