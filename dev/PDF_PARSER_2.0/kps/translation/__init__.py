@@ -14,6 +14,11 @@ import from submodules if needed.
 
 # RECOMMENDED: Simple and fast
 from .glossary_translator import GlossaryTranslator, TranslationResult as SimpleResult
+from .translation_memory import (
+    TranslationMemory,
+    TranslationMemoryEntry,
+    SuggestedGlossaryTerm,
+)
 
 # Core components
 from .glossary import (
@@ -62,6 +67,9 @@ __all__ = [
     # RECOMMENDED: Simple and fast
     "GlossaryTranslator",
     "SimpleResult",
+    "TranslationMemory",
+    "TranslationMemoryEntry",
+    "SuggestedGlossaryTerm",
     # Core components
     "TranslationOrchestrator",
     "TranslationSegment",
