@@ -1,0 +1,21 @@
+
+# GREP Styles and Find/Change for French punctuation (run per document)
+
+# Insert non-breaking space before ; ! ? :
+Find: \s+([;!\?:])
+Change to: ~S$1
+Scope: Paragraph Style: Body, H1/H2/H3, Figure Caption
+
+# Protect thin spaces around guillemets « »
+Find: «\s+
+Change: «~S
+Find: \s+»
+Change: ~S»
+
+# Replace straight quotes with French quotes in FR
+Find: "([^"]+)"
+Change: «$1»
+Language: FR stories only
+
+# No-widow (avoid single-word last line)
+Paragraph Keep Options: Keep Lines Together: at least 2 lines at end of paragraph.

@@ -1,0 +1,151 @@
+# Sewing Glossary for KPS v2.0
+# Multi-language translations for sewing terminology (RU → EN, FR)
+
+metadata:
+  version: "1.0.0"
+  domain: "sewing"
+  last_updated: "2025-11-06"
+  languages:
+    - ru
+    - en
+    - fr
+
+# Sewing abbreviations
+abbreviations:
+  rs:
+    ru: "ЛС"
+    en: "RS"
+    fr: "End"
+    description: "Right side / Лицевая сторона"
+    protected_tokens: ["RS", "ЛС"]
+
+  ws:
+    ru: "ИС"
+    en: "WS"
+    fr: "Env"
+    description: "Wrong side / Изнаночная сторона"
+    protected_tokens: ["WS", "ИС"]
+
+  sa:
+    ru: "ПШ"
+    en: "SA"
+    fr: "VA"
+    description: "Seam allowance / Припуск на швы"
+    protected_tokens: ["SA", "ПШ"]
+
+# Sewing terms
+terms:
+  seam:
+    ru: "Шов"
+    en: "Seam"
+    fr: "Couture"
+
+  seam_allowance:
+    ru: "Припуск на шов"
+    en: "Seam allowance"
+    fr: "Valeur d'assemblage"
+
+  pattern:
+    ru: "Выкройка"
+    en: "Pattern"
+    fr: "Patron"
+
+  fabric:
+    ru: "Ткань"
+    en: "Fabric"
+    fr: "Tissu"
+
+  thread:
+    ru: "Нитки"
+    en: "Thread"
+    fr: "Fil"
+
+  needle:
+    ru: "Игла"
+    en: "Needle"
+    fr: "Aiguille"
+
+  scissors:
+    ru: "Ножницы"
+    en: "Scissors"
+    fr: "Ciseaux"
+
+  pins:
+    ru: "Булавки"
+    en: "Pins"
+    fr: "Épingles"
+
+  interfacing:
+    ru: "Дублерин"
+    en: "Interfacing"
+    fr: "Entoilage"
+
+  zipper:
+    ru: "Молния"
+    en: "Zipper"
+    fr: "Fermeture éclair"
+
+  buttonhole:
+    ru: "Петля для пуговицы"
+    en: "Buttonhole"
+    fr: "Boutonnière"
+
+  hem:
+    ru: "Подгибка"
+    en: "Hem"
+    fr: "Ourlet"
+
+  baste:
+    ru: "Наметать"
+    en: "Baste"
+    fr: "Bâtir"
+
+  backstitch:
+    ru: "Обратный стежок"
+    en: "Backstitch"
+    fr: "Point arrière"
+
+  topstitch:
+    ru: "Отстрочка"
+    en: "Topstitch"
+    fr: "Surpiqûre"
+
+# Measurement units
+units:
+  cm:
+    ru: "см"
+    en: "cm"
+    fr: "cm"
+
+  mm:
+    ru: "мм"
+    en: "mm"
+    fr: "mm"
+
+  inch:
+    ru: "дюйм"
+    en: "inch"
+    fr: "pouce"
+
+  m:
+    ru: "м"
+    en: "m"
+    fr: "m"
+    description: "meters / метры"
+
+  yd:
+    ru: "ярд"
+    en: "yd"
+    fr: "yd"
+
+# Protected tokens
+protected_tokens:
+  - "Simplicity"
+  - "Vogue"
+  - "Burda"
+  - "RS"
+  - "WS"
+  - "SA"
+  - "ЛС"
+  - "ИС"
+  - "ПШ"

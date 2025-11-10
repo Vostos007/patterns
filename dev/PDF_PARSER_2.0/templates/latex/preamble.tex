@@ -1,0 +1,96 @@
+
+\documentclass[12pt]{scrartcl}
+\usepackage{fontspec}      % XeLaTeX for robust fonts
+\usepackage{polyglossia}   % proper hyphenation and typography per language
+\setmainfont{Noto Serif}
+\setsansfont{Noto Sans}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{geometry}
+\geometry{a4paper, margin=22mm}
+\setlength{\parskip}{6pt}
+\setlist{nosep}
+
+\usepackage{titlesec}
+\titleformat{\section}{\sffamily\Large\bfseries}{}{0pt}{}
+\titleformat{\subsection}{\sffamily\large\bfseries}{}{0pt}{}
+\titleformat{\subsubsection}{\sffamily\normalsize\bfseries}{}{0pt}{}
+
+% Figure macro with consistent sizing
+\newcommand{\KPSFigure}[3]{%
+  \begin{figure}[htbp]\centering
+  \includegraphics[width=#2]{#1}
+  \caption{#3}
+  \end{figure}
+}
+
+% Cover macro
+\newcommand{\KPSCover}[5]{%
+  \begin{titlepage}
+  \centering
+  \vspace*{15mm}
+  {\sffamily\bfseries\LARGE #1 \par}
+  \vspace{4mm}
+  {\sffamily\Large #2 \par}
+  \vspace{18mm}
+  \includegraphics[width=0.65\textwidth]{#3}\par
+  \vfill
+  {\small #4 \par}
+  {\small #5 \par}
+  \end{titlepage}
+}
+
+% Table styling helper
+\newenvironment{KPSTable}{\small\setlength{\tabcolsep}{6pt}}{}
+
+% Reusable size table
+\newcommand{\SizeTable}{%
+\begin{KPSTable}
+\begin{tabularx}{\textwidth}{l *{4}{>{\centering\arraybackslash}X}}
+\toprule
+\textbf{Размер} & 6{,}5 & 7 & 7{,}5 & 8 \\
+\midrule
+\textbf{Обхват кисти (см)} & 18 & 19 & 20{,}5 & 21{,}5 \\
+\bottomrule
+\end{tabularx}
+\end{KPSTable}
+}
+
+% Materials table
+\newcommand{\MaterialsRU}{%
+\begin{itemize}
+  \item Casagrande Yak 80 — 1 моток для всех размеров \textit{или} Gruendl Hot Socks Pearl uni — для размеров 6{,}5 и 7 — 1 моток; для 7{,}5 и 8 — 2 мотка
+  \item Круговые спицы 2{,}25 мм
+  \item Маркеры для вязания
+  \item Игла для сшивания
+  \item Сантиметровая лента, ножницы
+  \item Дополнительная нить
+\end{itemize}
+}
+
+\newcommand{\MaterialsEN}{%
+\begin{itemize}
+  \item Casagrande Yak 80 — 1 skein for all sizes \textit{or} Gruendl Hot Socks Pearl uni — sizes 6.5 \& 7: 1 skein; sizes 7.5 \& 8: 2 skeins
+  \item 2.25 mm circular needles
+  \item Stitch markers
+  \item Tapestry needle
+  \item Measuring tape, scissors
+  \item Waste yarn
+\end{itemize}
+}
+
+\newcommand{\MaterialsFR}{%
+\begin{itemize}
+  \item Casagrande Yak 80 — 1 pelote pour toutes les tailles \textit{ou} Gruendl Hot Socks Pearl uni — tailles 6{,}5 \& 7 : 1 pelote ; 7{,}5 \& 8 : 2 pelotes
+  \item Aiguilles circulaires 2{,}25 mm
+  \item Marqueurs
+  \item Aiguille à laine
+  \item Mètre ruban, ciseaux
+  \item Fil de secours
+\end{itemize}
+}
+

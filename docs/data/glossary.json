@@ -1,0 +1,294 @@
+{
+    "meta": {
+      "title": "RU–EN–FR Knitting & Crochet Glossary",
+      "created": "2025-11-05",
+      "source_language": "ru",
+      "target_languages": ["en", "fr"],
+      "conventions": {
+        "knitting_abbrev_style_en": "Common US/International knitting abbreviations (k, p, yo, k2tog, ssk, BO, CO, RS/WS).",
+        "crochet_terms_en": "US crochet terms (sc, hdc, dc, tr).",
+        "french_style": "Contemporary FR usage from major publishers (end, env, m, rg/tour, jeté, surjet simple, 2 m ens end).",
+        "units": "Convert см→cm, мм→mm, г→g, м→m; preserve numerals, ×, %, (), [], {}, *, ** in patterns.",
+        "notes": "Chart symbols vary by publisher—follow the legend; protected tokens must remain unchanged in translation."
+      },
+      "schema_fields": ["ru", "en", "fr", "category", "note", "protected_tokens"]
+    },
+    "entries": [
+      // --- Core abbreviations & counting ---
+      {"ru":"п","en":"stitch (st)","fr":"maille (m)","category":"abbrev/count","note":"Unit for counting stitches and gauge.","protected_tokens":["п","st","m"]},
+      {"ru":"р","en":"row (row); round (rnd) by context","fr":"rang (rg); tour (tour) selon le contexte","category":"abbrev/count","note":"If worked flat → row; in the round → round.","protected_tokens":["row","rnd","rg","tour"]},
+      {"ru":"см","en":"cm","fr":"cm","category":"unit","note":"Centimeters for measurements and gauge.","protected_tokens":["cm","×"]},
+      {"ru":"мм","en":"mm","fr":"mm","category":"unit","note":"Millimeters for needle/hook size.","protected_tokens":["mm"]},
+      {"ru":"м","en":"m","fr":"m","category":"unit","note":"Meters for yardage/meterage.","protected_tokens":["m"]},
+      {"ru":"г","en":"g","fr":"g","category":"unit","note":"Grams for skein weight and gauge swatch weight.","protected_tokens":["g"]},
+      {"ru":"№","en":"No./US size or metric","fr":"n° (taille)","category":"notation","note":"Needle/hook sizing marker written before number.","protected_tokens":["№","n°"]},
+  
+      // --- Core stitches (knitting) ---
+      {"ru":"лицевая петля","en":"knit stitch (k)","fr":"maille endroit (end)","category":"stitch","note":"Basic knit.","protected_tokens":["k","end"]},
+      {"ru":"лиц","en":"knit (k)","fr":"endroit (end)","category":"abbrev/stitch","note":"Abbrev used in text and charts.","protected_tokens":["k","end"]},
+      {"ru":"изнаночная петля","en":"purl stitch (p)","fr":"maille envers (env)","category":"stitch","note":"Basic purl.","protected_tokens":["p","env"]},
+      {"ru":"изн","en":"purl (p)","fr":"envers (env)","category":"abbrev/stitch","note":"Abbrev used in text and charts.","protected_tokens":["p","env"]},
+      {"ru":"кромочная (кром.)","en":"selvage/edge stitch","fr":"maille de lisière (mlis)","category":"stitch","note":"Edge stitch not always counted in repeats.","protected_tokens":["кром.","mlis"]},
+      {"ru":"лицевая скрещённая","en":"knit through back loop (k tbl)","fr":"maille endroit torse (m end torse)","category":"stitch","note":"Twisted knit; tightens columns.","protected_tokens":["k tbl"]},
+      {"ru":"изнаночная скрещённая","en":"purl through back loop (p tbl)","fr":"maille envers torse (m env torse)","category":"stitch","note":"Twisted purl.","protected_tokens":["p tbl"]},
+      {"ru":"снять 1 п непровязанной","en":"slip 1 stitch (sl 1)","fr":"glisser 1 maille (gl 1 m)","category":"stitch/manipulation","note":"Slip knitwise or purlwise as specified.","protected_tokens":["sl 1"]},
+      {"ru":"накид (н)","en":"yarn over (yo)","fr":"jeté (jét.)","category":"stitch","note":"Creates eyelet and +1 st.","protected_tokens":["yo","jét."]},
+      {"ru":"нить перед работой (НП)","en":"yarn in front (yfwd / yarn in front)","fr":"fil devant (fdv)","category":"stitch/context","note":"Positioning instruction, often before slip purlwise.","protected_tokens":["yfwd"]},
+      {"ru":"нить за работой (НЗ)","en":"yarn in back (yarn back)","fr":"fil derrière (fdr)","category":"stitch/context","note":"Positioning instruction.","protected_tokens":[]},
+  
+      // --- Decreases (knitting) ---
+      {"ru":"2 вместе лицевой (2 вм. лиц.)","en":"knit 2 together (k2tog)","fr":"2 m ensemble endroit (2 m ens end)","category":"decrease","note":"Right-leaning decrease.","protected_tokens":["k2tog","2 m ens end"]},
+      {"ru":"2 вместе изнаночной","en":"purl 2 together (p2tog)","fr":"2 m ensemble envers (2 m ens env)","category":"decrease","note":"Purl-side decrease.","protected_tokens":["p2tog"]},
+      {"ru":"убавка с наклоном влево (ssk)","en":"slip, slip, knit (ssk)","fr":"surjet simple (SS)","category":"decrease","note":"Left-leaning decrease; FR term also 'diminution surjetée'.","protected_tokens":["ssk","SS"]},
+      {"ru":"центральная двойная убавка","en":"centered double decrease (CDD)","fr":"diminution centrale double (DCD)","category":"decrease","note":"Slip 2 as if to k2tog, k1, pass 2 slipped sts over.","protected_tokens":["CDD","DCD"]},
+      {"ru":"убавка протяжкой (skp/psso)","en":"skp / psso (slip 1, k1, pass slipped stitch over)","fr":"surjet simple (passer la m glissée par-dessus)","category":"decrease","note":"Left-leaning; older EN uses SKP.","protected_tokens":["skp","psso"]},
+  
+      // --- Increases (knitting) ---
+      {"ru":"прибавить 1 п из протяжки с наклоном влево","en":"make 1 left (M1L)","fr":"augmentation levée gauche (M1L)","category":"increase","note":"Lifted from strand with left-leaning twist.","protected_tokens":["M1L"]},
+      {"ru":"прибавить 1 п из протяжки с наклоном вправо","en":"make 1 right (M1R)","fr":"augmentation levée droite (M1R)","category":"increase","note":"Lifted from strand with right-leaning twist.","protected_tokens":["M1R"]},
+      {"ru":"прибавка из петли ниже","en":"lifted increase (LLI/RLI)","fr":"augmentation levée dans la maille inférieure","category":"increase","note":"From stitch below; specify left/right if needed.","protected_tokens":["LLI","RLI"]},
+      {"ru":"накид скрещённый","en":"twisted yarn over (close the hole)","fr":"jeté torse","category":"increase","note":"Avoids an eyelet; tighten on next row.","protected_tokens":[]},
+  
+      // --- Fabric/textures (knitting) ---
+      {"ru":"лицевая гладь","en":"stockinette stitch","fr":"jersey endroit","category":"fabric","note":"K on RS, P on WS (flat); all knit in the round.","protected_tokens":[]},
+      {"ru":"изнаночная гладь","en":"reverse stockinette","fr":"jersey envers","category":"fabric","note":"P on RS, K on WS.","protected_tokens":[]},
+      {"ru":"платочная вязка","en":"garter stitch","fr":"point mousse","category":"fabric","note":"All knit flat; alternate knit/purl in the round.","protected_tokens":[]},
+      {"ru":"резинка 1×1","en":"1×1 rib","fr":"côtes 1/1","category":"fabric","note":"K1, P1 columns.","protected_tokens":["1×1"]},
+      {"ru":"резинка 2×2","en":"2×2 rib","fr":"côtes 2/2","category":"fabric","note":"K2, P2 columns.","protected_tokens":["2×2"]},
+      {"ru":"жемчужный узор (путанка)","en":"seed stitch","fr":"point de riz","category":"fabric","note":"Alternate k/p every stitch and row.","protected_tokens":[]},
+      {"ru":"рисовая крупная (мох)" ,"en":"moss stitch","fr":"point de blé","category":"fabric","note":"Two-row repeat variant of seed stitch.","protected_tokens":[]},
+      {"ru":"ажур","en":"lace","fr":"dentelle","category":"fabric","note":"Openwork combining yo with decreases.","protected_tokens":[]},
+      {"ru":"жгут/коса","en":"cable","fr":"torsade","category":"fabric","note":"Crossed stitches; may require cable needle.","protected_tokens":[]},
+      {"ru":"английская резинка","en":"brioche stitch","fr":"point brioche","category":"fabric","note":"Yarn overs paired with slipped stitches; lofty.","protected_tokens":[]},
+      {"ru":"полупатентная резинка","en":"half brioche / fisherman’s rib","fr":"fausse brioche","category":"fabric","note":"Easier brioche-like texture.","protected_tokens":[]},
+      {"ru":"полая резинка","en":"tubular rib (double-knit rib)","fr":"côtes tubulaires","category":"fabric","note":"Often paired with Italian cast-on/bind-off.","protected_tokens":[]},
+  
+      // --- Working context & repeats ---
+      {"ru":"лицевая сторона (ЛС)","en":"right side (RS)","fr":"endroit du travail (EDT)","category":"context","note":"Public side of work.","protected_tokens":["RS"]},
+      {"ru":"изнаночная сторона (ИС)","en":"wrong side (WS)","fr":"envers du travail (EVT)","category":"context","note":"Back side of work.","protected_tokens":["WS"]},
+      {"ru":"вязать по кругу","en":"work in the round","fr":"tricoter en rond","category":"instruction","note":"Use circulars or DPNs; rows become rounds.","protected_tokens":[]},
+      {"ru":"вязать поворотными рядами","en":"work flat (back and forth)","fr":"tricoter à plat (aller‑retour)","category":"instruction","note":"Turn at end of each row.","protected_tokens":[]},
+      {"ru":"повторять от * до *","en":"repeat from * to *","fr":"répéter de * à *","category":"notation","note":"Asterisks delimit a repeat section.","protected_tokens":["*"]},
+      {"ru":"повторять между **","en":"repeat between **","fr":"répéter entre **","category":"notation","note":"Double asterisk repeat.","protected_tokens":["**"]},
+      {"ru":"до конца ряда","en":"to end of row","fr":"jusqu’à la fin du rang","category":"instruction","note":"Work the remainder of the row.","protected_tokens":[]},
+      {"ru":"одновременно","en":"at the same time","fr":"en même temps","category":"instruction","note":"Parallel shaping/steps.","protected_tokens":[]},
+      {"ru":"перевернуть работу","en":"turn work","fr":"tourner le travail","category":"instruction","note":"Used in flat knitting and short rows.","protected_tokens":[]},
+      {"ru":"замкнуть в круг, не перекручивая","en":"join to work in the round, being careful not to twist","fr":"joindre en rond sans vriller","category":"instruction","note":"Align cast‑on edge before joining.","protected_tokens":[]},
+      {"ru":"снять маркер (см) / переместить маркер","en":"slip marker (sm) / move marker","fr":"glisser le marqueur (gm) / déplacer le marqueur","category":"instruction","note":"Marker handling.","protected_tokens":["sm","gm"]},
+  
+      // --- Casting on / binding off / finishing ---
+      {"ru":"набор петель (набирать)","en":"cast on (CO)","fr":"monter les mailles (mont.)","category":"finishing","note":"Begin a new set of stitches.","protected_tokens":["CO"]},
+      {"ru":"закрыть петли (закрытие)","en":"bind off / cast off (BO)","fr":"rabattre les mailles (rab.)","category":"finishing","note":"Finish live stitches.","protected_tokens":["BO"]},
+      {"ru":"итальянский набор","en":"Italian cast‑on (tubular)","fr":"montage italien (tubulaire)","category":"finishing","note":"Elastic edge for ribs.","protected_tokens":[]},
+      {"ru":"итальянское закрытие","en":"Italian bind‑off (tubular)","fr":"rabattage italien (tubulaire)","category":"finishing","note":"Elastic finish for ribs.","protected_tokens":[]},
+      {"ru":"добрать/поднять петли по краю","en":"pick up and knit stitches","fr":"relever des mailles","category":"finishing","note":"For bands, collars, heels.","protected_tokens":[]},
+      {"ru":"кеттельный шов","en":"Kitchener stitch (grafting)","fr":"greffe Kitchener (grafting)","category":"finishing","note":"Seam live sts invisibly (e.g., toe).","protected_tokens":[]},
+      {"ru":"трикотажный шов","en":"mattress stitch","fr":"couture invisible (point de matelas)","category":"finishing","note":"Vertical or horizontal seams.","protected_tokens":[]},
+      {"ru":"закрепить/спрятать концы","en":"weave in ends","fr":"rentrer les fils","category":"finishing","note":"Secure tails on WS.","protected_tokens":[]},
+      {"ru":"блокировка (ВТО)","en":"blocking (wet/steam)","fr":"blocage (à l’eau/à la vapeur)","category":"finishing","note":"Shape to measurements after washing/steaming. RU 'ВТО' = влажно‑тепловая обработка.","protected_tokens":["ВТО"]},
+      {"ru":"отпаривание","en":"steam blocking","fr":"blocage à la vapeur","category":"finishing","note":"Use steam through a cloth; avoid felting fibers.","protected_tokens":[]},
+      {"ru":"обрезать нить","en":"cut yarn","fr":"couper le fil","category":"finishing","note":"Secure first if needed.","protected_tokens":[]},
+      {"ru":"присоединить нить","en":"join yarn","fr":"joindre le fil","category":"finishing","note":"Start a new ball/color cleanly.","protected_tokens":[]},
+      {"ru":"снять на дополнительную нить","en":"place sts on waste yarn","fr":"mettre les mailles en attente sur un fil","category":"finishing","note":"Hold stitches for later.","protected_tokens":[]},
+  
+      // --- Short rows & shaping ---
+      {"ru":"укороченные ряды","en":"short rows","fr":"rangs raccourcis","category":"shaping","note":"Add shaping without full rows.","protected_tokens":[]},
+      {"ru":"немецкие укороченные ряды","en":"German short rows","fr":"rangs raccourcis allemands","category":"shaping","note":"Double‑stitch method (ds).","protected_tokens":["ds"]},
+      {"ru":"японские укороченные ряды","en":"Japanese short rows","fr":"rangs raccourcis japonais","category":"shaping","note":"Marker/loop pickup technique.","protected_tokens":[]},
+      {"ru":"обвить и повернуть (ОП)","en":"wrap and turn (w&t)","fr":"enrouler et tourner","category":"shaping","note":"Classic short‑row wrap method.","protected_tokens":["w&t"]},
+      {"ru":"пройма","en":"armhole","fr":"emmanchure","category":"construction","note":"Opening for the sleeve.","protected_tokens":[]},
+      {"ru":"скос плеча","en":"shoulder slope","fr":"pente d’épaule","category":"construction","note":"Shaping with short rows or BO steps.","protected_tokens":[]},
+  
+      // --- Garment construction ---
+      {"ru":"кокетка (круглая)","en":"circular yoke","fr":"empiècement circulaire","category":"construction","note":"Shaping distributed around neckline.","protected_tokens":[]},
+      {"ru":"реглан","en":"raglan","fr":"raglan","category":"construction","note":"Diagonal seams from neckline to underarm.","protected_tokens":[]},
+      {"ru":"вточной рукав","en":"set‑in sleeve","fr":"manche montée","category":"construction","note":"Sewn or picked up after armhole shaping.","protected_tokens":[]},
+      {"ru":"спущенное плечо","en":"drop shoulder","fr":"épaule tombante","category":"construction","note":"Straight body, sleeves picked up from edge.","protected_tokens":[]},
+      {"ru":"плечо‑седло","en":"saddle shoulder","fr":"épaule sellier","category":"construction","note":"Saddle panel along shoulder seam.","protected_tokens":[]},
+      {"ru":"подрезы (подмышкой)","en":"underarm stitches/gusset","fr":"gousset/mailles d’aisselle","category":"construction","note":"Cast on or hold sts at underarm.","protected_tokens":[]},
+      {"ru":"приталивание","en":"waist shaping","fr":"cintrage","category":"construction","note":"Series of inc/dec for fit.","protected_tokens":[]},
+      {"ru":"вытачки (грудь)","en":"bust darts","fr":"pinces poitrine","category":"construction","note":"Short‑row shaping at bust.","protected_tokens":[]},
+      {"ru":"горловина","en":"neckline","fr":"encolure","category":"construction","note":"Crew, V‑neck, etc.","protected_tokens":[]},
+      {"ru":"планка/планка с пуговицами","en":"button band / placket","fr":"bande de boutonnage / patte","category":"construction","note":"Picked up along edge.","protected_tokens":[]},
+      {"ru":"пуговица","en":"button","fr":"bouton","category":"notion","note":"Fastener sewn onto band.","protected_tokens":[]},
+      {"ru":"петля для пуговицы","en":"buttonhole","fr":"boutonnière","category":"construction","note":"One‑row or vertical method.","protected_tokens":[]},
+      {"ru":"манжета","en":"cuff","fr":"poignet","category":"construction","note":"Sleeve ribbing at wrist.","protected_tokens":[]},
+      {"ru":"нижняя планка/подгиб","en":"hem / folded hem","fr":"ourlet / ourlet replié","category":"construction","note":"Finishing at lower edge.","protected_tokens":[]},
+      {"ru":"шлица","en":"vent/slit","fr":"fente","category":"construction","note":"Opening at hem or sleeve.","protected_tokens":[]},
+      {"ru":"воротник (стойка/шаль)","en":"collar (stand/shawl)","fr":"col (officier/châle)","category":"construction","note":"Various collar types.","protected_tokens":[]},
+      {"ru":"ластовица (большого пальца)","en":"thumb gusset","fr":"gousset du pouce","category":"construction","note":"Glove/mitten shaping.","protected_tokens":[]},
+      {"ru":"мысок (носка)","en":"toe","fr":"pointe (chaussette)","category":"construction","note":"Toe shaping (wedge, rounded).","protected_tokens":[]},
+      {"ru":"пятка","en":"heel","fr":"talon","category":"construction","note":"Heel flap and gusset, short‑row, etc.","protected_tokens":[]},
+      {"ru":"клин подъёма стопы","en":"sock gusset","fr":"gousset du pied","category":"construction","note":"Decreases after heel turn.","protected_tokens":[]},
+  
+      // --- Chart symbols (common conventions; keep symbol unchanged) ---
+      {"ru":"[ ] (пустая клетка)","en":"knit on RS, purl on WS (blank square)","fr":"endroit sur l’endroit, envers sur l’envers (case vide)","category":"chart_symbol","note":"Very common default; verify legend.","protected_tokens":["[ ]"]},
+      {"ru":"• (точка)","en":"purl on RS (dot)","fr":"envers sur l’endroit (point)","category":"chart_symbol","note":"Another common purl symbol.","protected_tokens":["•"]},
+      {"ru":"○ (кружок)","en":"yarn over (yo)","fr":"jeté","category":"chart_symbol","note":"Increase with a hole.","protected_tokens":["○","yo"]},
+      {"ru":"∕ (наклон вправо)","en":"k2tog (right‑lean)","fr":"2 m ens end","category":"chart_symbol","note":"Right‑leaning decrease.","protected_tokens":["∕","k2tog"]},
+      {"ru":"∖ (наклон влево)","en":"ssk (left‑lean)","fr":"surjet simple","category":"chart_symbol","note":"Left‑leaning decrease.","protected_tokens":["∖","ssk"]},
+      {"ru":"∧ (вершина)","en":"centered double decrease (CDD)","fr":"diminution centrale double","category":"chart_symbol","note":"Slip 2, k1, p2sso.","protected_tokens":["∧"]},
+      {"ru":"— (тире)","en":"purl on RS (dash)","fr":"envers sur l’endroit","category":"chart_symbol","note":"Publisher‑specific; confirm legend.","protected_tokens":["—"]},
+  
+      // --- Crochet (US terminology in EN; FR standard) ---
+      {"ru":"крючок","en":"crochet hook","fr":"crochet","category":"tool","note":"Sized in mm; letters common in US.","protected_tokens":[]},
+      {"ru":"воздушная петля (ВП)","en":"chain (ch)","fr":"maille en l’air (ml)","category":"crochet/stitch","note":"Foundation and turning chains.","protected_tokens":["ch","ml"]},
+      {"ru":"соединительный столбик (СС)","en":"slip stitch (sl st)","fr":"maille coulée (mc)","category":"crochet/stitch","note":"Join rounds, move across.","protected_tokens":["sl st","mc"]},
+      {"ru":"столбик без накида (СБН)","en":"single crochet (sc)","fr":"maille serrée (ms)","category":"crochet/stitch","note":"Dense basic stitch.","protected_tokens":["sc","ms"]},
+      {"ru":"полустолбик с накидом (ПССН)","en":"half double crochet (hdc)","fr":"demi‑bride (db)","category":"crochet/stitch","note":"Height between sc and dc.","protected_tokens":["hdc","db"]},
+      {"ru":"столбик с накидом (ССН)","en":"double crochet (dc)","fr":"bride (br)","category":"crochet/stitch","note":"Common tall stitch.","protected_tokens":["dc","br"]},
+      {"ru":"двойной столбик с накидом (ДССН)","en":"treble crochet (tr)","fr":"double bride (dbr)","category":"crochet/stitch","note":"Taller stitch.","protected_tokens":["tr","dbr"]},
+      {"ru":"пико","en":"picot","fr":"picot","category":"crochet/edging","note":"Small decorative loop.","protected_tokens":[]},
+      {"ru":"арка из ВП","en":"chain space (ch‑sp)","fr":"espace de mailles en l’air (espace de ml)","category":"crochet/space","note":"Gap created by chains.","protected_tokens":["ch‑sp"]},
+      {"ru":"кольцо амигуруми","en":"magic ring","fr":"anneau magique","category":"crochet/start","note":"Adjustable loop start for rounds.","protected_tokens":[]},
+  
+      // --- Tools & accessories ---
+      {"ru":"спицы прямые","en":"straight needles","fr":"aiguilles droites","category":"tool","note":"Flat knitting.","protected_tokens":[]},
+      {"ru":"спицы круговые","en":"circular needles","fr":"aiguilles circulaires","category":"tool","note":"Work in the round or flat with cable.","protected_tokens":[]},
+      {"ru":"чулочные спицы (носочные)","en":"double‑pointed needles (DPNs)","fr":"aiguilles à double pointe (ADP)","category":"tool","note":"Sets of 4–5 needles for small circumferences.","protected_tokens":["DPNs","ADP"]},
+      {"ru":"наборные (съёмные) спицы","en":"interchangeable needles","fr":"aiguilles interchangeables","category":"tool","note":"Tips + cables system.","protected_tokens":[]},
+      {"ru":"леска (для спиц)","en":"needle cable/cord","fr":"câble (pour aiguilles)","category":"tool","note":"Connects needle tips.","protected_tokens":[]},
+      {"ru":"маркеры петель","en":"stitch markers","fr":"marqueurs de mailles","category":"tool","note":"Removable or ring markers.","protected_tokens":[]},
+      {"ru":"держатель петель/булавка","en":"stitch holder","fr":"arrêt de mailles / épingle à mailles","category":"tool","note":"Holds live stitches.","protected_tokens":[]},
+      {"ru":"игла для сшивания (трикотажная)","en":"tapestry needle","fr":"aiguille à laine","category":"tool","note":"Blunt needle for seaming and ends.","protected_tokens":[]},
+      {"ru":"счётчик рядов","en":"row counter","fr":"compteur de rangs","category":"tool","note":"Manual or clicker device.","protected_tokens":[]},
+      {"ru":"булавки/Т‑булавки для блокировки","en":"blocking pins/T‑pins","fr":"épingles/T‑pins de blocage","category":"tool","note":"Pin to mats when blocking.","protected_tokens":[]},
+      {"ru":"коврики для блокировки","en":"blocking mats","fr":"tapis de blocage","category":"tool","note":"Interlocking foam tiles.","protected_tokens":[]},
+      {"ru":"крючки‑помощники для кос","en":"cable needle","fr":"aiguille à torsade","category":"tool","note":"Holds sts while crossing.","protected_tokens":[]},
+      {"ru":"стопперы на спицы","en":"needle stoppers/end caps","fr":"embouts d’aiguilles","category":"tool","note":"Prevent stitches from sliding off.","protected_tokens":[]},
+      {"ru":"моталка для пряжи","en":"yarn winder","fr":"bobinoir","category":"tool","note":"Makes center‑pull cakes.","protected_tokens":[]},
+      {"ru":"моталка‑зонтик (вилюшка)","en":"swift","fr":"dévidoir (parapluie)","category":"tool","note":"Holds hanks for winding.","protected_tokens":[]},
+  
+      // --- Yarn, fiber, treatments, textures ---
+      {"ru":"пряжа","en":"yarn","fr":"fil / laine","category":"yarn","note":"General term for knitting/crochet yarn.","protected_tokens":[]},
+      {"ru":"моток","en":"ball / skein (US varies)","fr":"pelote","category":"yarn/package","note":"Retail unit wound as a ball.","protected_tokens":[]},
+      {"ru":"пасма","en":"hank","fr":"écheveau","category":"yarn/package","note":"Twisted loop; needs winding.","protected_tokens":[]},
+      {"ru":"бобина","en":"cone","fr":"cône","category":"yarn/package","note":"Industrial format.","protected_tokens":[]},
+      {"ru":"метраж (м/100 г)","en":"meterage (m/100 g); yardage","fr":"métrage (m/100 g)","category":"yarn/spec","note":"Length per weight; key for substitutions.","protected_tokens":["m/100 g"]},
+      {"ru":"крутка/скрутка (ply)","en":"ply/twist","fr":"retors","category":"yarn/spec","note":"Number of plies and twist tightness.","protected_tokens":[]},
+      {"ru":"одиночная нить (single)","en":"single‑ply","fr":"single / mèche","category":"yarn/spec","note":"Untwisted look; pills/felts more.","protected_tokens":["single"]},
+      {"ru":"супервош (superwash)","en":"superwash (machine‑washable wool)","fr":"superwash","category":"treatment","note":"Resists felting; still gentle care.","protected_tokens":["superwash"]},
+      {"ru":"антипиллинг","en":"anti‑pilling","fr":"anti‑boulochage","category":"treatment","note":"Surface treatment to reduce pills.","protected_tokens":[]},
+      {"ru":"секционная окраска","en":"self‑striping/variegated","fr":"teinture à sections / auto‑rayant / chiné","category":"color","note":"Color changes along the strand.","protected_tokens":[]},
+      {"ru":"градиент","en":"gradient / ombré","fr":"dégradé / ombré","category":"color","note":"Smooth color transitions.","protected_tokens":[]},
+      {"ru":"меланж","en":"heather / marl","fr":"chinée / chiné","category":"color","note":"Mixed tones/plies for flecked effect.","protected_tokens":[]},
+  
+      // --- Fiber types ---
+      {"ru":"шерсть","en":"wool","fr":"laine","category":"fiber","note":"General sheep wool.","protected_tokens":[]},
+      {"ru":"меринос","en":"merino wool","fr":"laine mérinos","category":"fiber","note":"Soft fine wool.","protected_tokens":[]},
+      {"ru":"альпака","en":"alpaca","fr":"alpaga","category":"fiber","note":"Warm, drapey; may grow/stretch.","protected_tokens":[]},
+      {"ru":"мохер","en":"mohair","fr":"mohair","category":"fiber","note":"Halo from angora goat; often with silk.","protected_tokens":[]},
+      {"ru":"шёлк","en":"silk","fr":"soie","category":"fiber","note":"Lustre and drape.","protected_tokens":[]},
+      {"ru":"хлопок","en":"cotton","fr":"coton","category":"fiber","note":"Breathable; little elasticity.","protected_tokens":[]},
+      {"ru":"лён","en":"linen/flax","fr":"lin","category":"fiber","note":"Crisp, softens with wear.","protected_tokens":[]},
+      {"ru":"вискоза","en":"viscose/rayon","fr":"viscose","category":"fiber","note":"Regenerated cellulose; drape.","protected_tokens":[]},
+      {"ru":"бамбук","en":"bamboo (viscose from bamboo)","fr":"bambou (viscose de bambou)","category":"fiber","note":"Typically regenerated fiber, not true bast.","protected_tokens":[]},
+      {"ru":"полиамид","en":"nylon (polyamide)","fr":"polyamide (nylon)","category":"fiber","note":"Strength, socks reinforcement.","protected_tokens":[]},
+      {"ru":"полиэстер","en":"polyester","fr":"polyester","category":"fiber","note":"Durability, blends.","protected_tokens":[]},
+      {"ru":"эластан (лайкра)","en":"elastane (spandex)","fr":"élasthanne","category":"fiber","note":"Stretch added in blends.","protected_tokens":[]},
+  
+      // --- Yarn weights (CYC/market names) ---
+      {"ru":"лейс (lace)","en":"lace weight","fr":"lace/dentelle","category":"weight","note":"≈ 800–1200 m/100 g; very fine.","protected_tokens":[]},
+      {"ru":"фингеринг (носковая)","en":"fingering (sock)","fr":"fingering / fil à chaussette","category":"weight","note":"≈ 350–450 m/100 g.","protected_tokens":["fingering"]},
+      {"ru":"спорт","en":"sport weight","fr":"sport","category":"weight","note":"≈ 280–330 m/100 g.","protected_tokens":[]},
+      {"ru":"DK (дк)","en":"DK (double knitting)","fr":"DK","category":"weight","note":"≈ 200–250 m/100 g.","protected_tokens":["DK"]},
+      {"ru":"ворстед","en":"worsted weight","fr":"worsted","category":"weight","note":"≈ 180–220 m/100 g.","protected_tokens":[]},
+      {"ru":"аран","en":"aran","fr":"aran","category":"weight","note":"Heavier than worsted.","protected_tokens":[]},
+      {"ru":"булки/толстая","en":"bulky","fr":"bulky/épaisse","category":"weight","note":"Chunky yarns.","protected_tokens":[]},
+      {"ru":"супер булки","en":"super bulky","fr":"très épaisse (super bulky)","category":"weight","note":"Very thick yarn.","protected_tokens":[]},
+      {"ru":"джамбо","en":"jumbo","fr":"jumbo","category":"weight","note":"Extreme thickness (arm knitting).","protected_tokens":[]},
+  
+      // --- Gauge & sizing vocabulary ---
+      {"ru":"плотность вязания","en":"gauge (tension)","fr":"échantillon (tension)","category":"gauge","note":"Stitches/rows per width/height after blocking.","protected_tokens":[]},
+      {"ru":"образец (свотч)","en":"swatch","fr":"échantillon","category":"gauge","note":"Test square for gauge and fabric.","protected_tokens":[]},
+      {"ru":"плотность: 22 п × 30 р = 10 × 10 см","en":"gauge: 22 sts × 30 rows = 10 × 10 cm","fr":"échantillon : 22 m × 30 rg = 10 × 10 cm","category":"gauge","note":"Typical gauge statement; keep × and numerals.","protected_tokens":["×"]},
+      {"ru":"до/после ВТО","en":"before/after blocking","fr":"avant/après blocage","category":"gauge","note":"Gauge can change after finishing.","protected_tokens":[]},
+      {"ru":"свобода облегания (ease)","en":"ease","fr":"aisance","category":"sizing","note":"Difference between body and garment.","protected_tokens":[]},
+      {"ru":"ОГ (обхват груди)","en":"bust/chest circumference","fr":"tour de poitrine","category":"sizing","note":"Key fit measurement.","protected_tokens":["ОГ"]},
+      {"ru":"ОТ (талия)","en":"waist circumference","fr":"tour de taille","category":"sizing","note":"Body measurement.","protected_tokens":["ОТ"]},
+      {"ru":"ОБ (бедра)","en":"hip circumference","fr":"tour de hanches","category":"sizing","note":"Body measurement.","protected_tokens":["ОБ"]},
+      {"ru":"ДИ (длина изделия)","en":"garment length","fr":"longueur totale","category":"sizing","note":"From top to hem.","protected_tokens":["ДИ"]},
+      {"ru":"ДР (длина рукава)","en":"sleeve length","fr":"longueur de manche","category":"sizing","note":"From underarm or shoulder as specified.","protected_tokens":["ДР"]},
+      {"ru":"рост (статура)","en":"height (stature)","fr":"stature","category":"sizing","note":"Used in size charts.","protected_tokens":[]},
+  
+      // --- Socks & small circumferences ---
+      {"ru":"вязать на 5 спицах","en":"work on DPNs","fr":"tricoter sur aiguilles à double pointe (ADP)","category":"instruction","note":"Small circumference in the round.","protected_tokens":["DPNs","ADP"]},
+      {"ru":"метод «магическая петля»","en":"magic loop method","fr":"méthode magic loop","category":"instruction","note":"Long circular for small circumferences.","protected_tokens":["magic loop"]},
+  
+      // --- Additional manipulations ---
+      {"ru":"перекрещивание петель","en":"cross stitches / cable cross","fr":"croisement de mailles / torsade","category":"manipulation","note":"Define front/back hold (C4F/C4B).","protected_tokens":["C4F","C4B"]},
+      {"ru":"за переднюю стенку","en":"through front loop (tfl)","fr":"par le brin avant","category":"manipulation","note":"Loop orientation detail.","protected_tokens":["tfl"]},
+      {"ru":"за заднюю стенку","en":"through back loop (tbl)","fr":"par le brin arrière","category":"manipulation","note":"Loop orientation detail.","protected_tokens":["tbl"]},
+      {"ru":"провязать вместе 3 п","en":"k3tog / p3tog","fr":"3 m ens end / 3 m ens env","category":"decrease","note":"Triple decrease; specify k or p.","protected_tokens":["k3tog","p3tog"]},
+  
+      // --- Common instruction phrases ---
+      {"ru":"повторить ещё N раз","en":"repeat N more times","fr":"répéter N fois supplémentaires","category":"instruction","note":"Maintain counts unchanged.","protected_tokens":[]},
+      {"ru":"каждый 2‑й ряд","en":"every other row","fr":"tous les 2 rangs","category":"instruction","note":"Work action on alternate rows.","protected_tokens":["2‑й","2"]},
+      {"ru":"в каждом ряду","en":"every row","fr":"tous les rangs","category":"instruction","note":"Action on every row.","protected_tokens":[]},
+      {"ru":"в каждом 4‑м ряду","en":"every 4th row","fr":"tous les 4 rangs","category":"instruction","note":"Regular spacing for shaping.","protected_tokens":["4"]},
+      {"ru":"считать от маркера","en":"count from marker","fr":"compter à partir du marqueur","category":"instruction","note":"Marker is reference point.","protected_tokens":[]},
+  
+      // --- Retail & customer guidance ---
+      {"ru":"оплата картой","en":"card payment","fr":"paiement par carte","category":"retail","note":"Credit/debit checkout.","protected_tokens":[]},
+      {"ru":"оплата при получении (наложенный платёж)","en":"cash on delivery (COD)","fr":"paiement à la livraison","category":"retail","note":"Availability depends on region.","protected_tokens":["COD"]},
+      {"ru":"безопасная оплата","en":"secure payment","fr":"paiement sécurisé","category":"retail","note":"SSL and PCI compliance context.","protected_tokens":[]},
+      {"ru":"электронный файл (PDF)","en":"digital file (PDF)","fr":"fichier numérique (PDF)","category":"retail","note":"Pattern delivered as PDF.","protected_tokens":["PDF"]},
+      {"ru":"мгновенная загрузка","en":"instant download","fr":"téléchargement immédiat","category":"retail","note":"Available after payment confirmation.","protected_tokens":[]},
+      {"ru":"срок обработки заказа","en":"order processing time","fr":"délai de traitement","category":"retail","note":"Time before dispatch.","protected_tokens":[]},
+      {"ru":"стоимость доставки","en":"shipping cost","fr":"frais de livraison","category":"retail","note":"Shown at checkout or per table.","protected_tokens":[]},
+      {"ru":"срок доставки","en":"delivery time","fr":"délai de livraison","category":"retail","note":"Estimated transit time.","protected_tokens":[]},
+      {"ru":"международная доставка","en":"international shipping","fr":"livraison internationale","category":"retail","note":"Customs may apply.","protected_tokens":[]},
+      {"ru":"самовывоз","en":"store pickup","fr":"retrait en magasin","category":"retail","note":"Local collection option.","protected_tokens":[]},
+      {"ru":"возвраты","en":"returns","fr":"retours","category":"retail","note":"Within stated return window.","protected_tokens":[]},
+      {"ru":"обмен","en":"exchanges","fr":"échanges","category":"retail","note":"Swap item for another.","protected_tokens":[]},
+      {"ru":"возврат средств","en":"refund","fr":"remboursement","category":"retail","note":"Money returned to original method.","protected_tokens":[]},
+      {"ru":"бонусные баллы/баллы лояльности","en":"reward points","fr":"points de fidélité","category":"retail","note":"Can be redeemed on future orders.","protected_tokens":[]},
+      {"ru":"рассрочка","en":"installment plan","fr":"paiement en plusieurs fois","category":"retail","note":"Split payments via provider.","protected_tokens":[]},
+      {"ru":"промокод","en":"promo code","fr":"code promo","category":"retail","note":"Discount code at checkout.","protected_tokens":[]},
+      {"ru":"скидка","en":"discount","fr":"réduction","category":"retail","note":"Fixed or percent off.","protected_tokens":["%"]},
+      {"ru":"распродажа","en":"sale","fr":"soldes","category":"retail","note":"Promotional pricing period.","protected_tokens":[]},
+      {"ru":"налоги включены","en":"taxes included","fr":"taxes incluses","category":"retail","note":"Prices include applicable VAT.","protected_tokens":[]},
+      {"ru":"таможенные пошлины","en":"customs duties","fr":"droits de douane","category":"retail","note":"Buyer responsible unless stated.","protected_tokens":[]},
+      {"ru":"условия оферты","en":"offer terms","fr":"conditions de l’offre","category":"legal","note":"Details of promotion/offer.","protected_tokens":[]},
+      {"ru":"политика конфиденциальности","en":"privacy policy","fr":"politique de confidentialité","category":"legal","note":"Data handling statement.","protected_tokens":[]},
+      {"ru":"пользовательское соглашение","en":"terms of use","fr":"conditions d’utilisation","category":"legal","note":"Rules for site/pattern use.","protected_tokens":[]},
+      {"ru":"авторские права на описание","en":"pattern copyright","fr":"droits d’auteur sur le patron","category":"legal","note":"Pattern text/graphics are protected.","protected_tokens":[]},
+      {"ru":"разрешение на продажу готовых изделий","en":"permission to sell finished items","fr":"autorisation de vendre les articles finis","category":"legal","note":"State whether permitted with credit.","protected_tokens":[]},
+      {"ru":"цифровые товары возврату не подлежат","en":"digital goods are non‑refundable","fr":"les produits numériques ne sont pas remboursables","category":"legal","note":"Standard for PDF patterns.","protected_tokens":[]},
+      {"ru":"контакт для вопросов","en":"contact for questions","fr":"contact pour questions","category":"retail","note":"Support email or form.","protected_tokens":[]},
+  
+      // --- Safety & disclaimers (usage/legal) ---
+      {"ru":"только для личного использования","en":"for personal use only","fr":"pour usage personnel uniquement","category":"legal/disclaimer","note":"No redistribution or teaching from the file.","protected_tokens":[]},
+      {"ru":"запрещено коммерческое использование инструкции","en":"no commercial use of the pattern","fr":"utilisation commerciale du patron interdite","category":"legal/disclaimer","note":"Selling the PDF or copies is prohibited.","protected_tokens":[]},
+      {"ru":"разрешена продажа готовых изделий при указании авторства","en":"you may sell finished items with designer credit","fr":"vente des articles finis autorisée avec mention du créateur","category":"legal/disclaimer","note":"Credit line must accompany sales.","protected_tokens":[]},
+      {"ru":"не для детей до 3 лет — мелкие детали","en":"not for children under 3 years — small parts","fr":"ne convient pas aux moins de 3 ans — petites pièces","category":"safety","note":"Choking hazard warning.","protected_tokens":["—"]},
+      {"ru":"держите вдали от открытого огня","en":"keep away from open flame","fr":"tenir à l’écart des flammes","category":"safety","note":"Common fiber safety advice.","protected_tokens":[]},
+      {"ru":"могут возникнуть аллергические реакции","en":"may cause allergic reactions","fr":"peut provoquer des réactions allergiques","category":"safety","note":"Wool, mohair, etc.","protected_tokens":[]},
+      {"ru":"требуется присмотр взрослых","en":"adult supervision required","fr":"surveillance d’un adulte requise","category":"safety","note":"For children’s items or tools.","protected_tokens":[]},
+      {"ru":"следуйте инструкциям по уходу","en":"follow care instructions","fr":"suivre les instructions d’entretien","category":"safety","note":"Wash and dry as indicated.","protected_tokens":[]},
+      {"ru":"ответственность автора ограничена","en":"author’s liability is limited","fr":"responsabilité de l’auteur limitée","category":"legal/disclaimer","note":"No liability for misuse or errors.","protected_tokens":[]},
+      {"ru":"наличие и цены могут измениться без уведомления","en":"availability and prices may change without notice","fr":"disponibilités et prix susceptibles de changer sans préavis","category":"retail/disclaimer","note":"Standard shop notice.","protected_tokens":[]},
+      {"ru":"цвет может отличаться из‑за настроек экрана","en":"color may vary due to screen settings","fr":"la couleur peut varier selon les écrans","category":"retail/disclaimer","note":"Display variance warning.","protected_tokens":[]},
+      {"ru":"не является медицинским изделием","en":"not a medical device","fr":"n’est pas un dispositif médical","category":"safety","note":"For masks/garments claims.","protected_tokens":[]},
+  
+      // --- Socks/garment finishing extras ---
+      {"ru":"закрытие мыса «кеттельным швом»","en":"toe grafted using Kitchener stitch","fr":"pointe greffée au Kitchener","category":"finishing","note":"Invisible toe finish.","protected_tokens":[]},
+      {"ru":"закрыть эластично","en":"bind off loosely/stretchy BO","fr":"rabattre souplement","category":"finishing","note":"Maintain edge elasticity.","protected_tokens":[]},
+  
+      // --- Colorwork & floats ---
+      {"ru":"жаккард (по кругу)","en":"stranded colorwork (in the round)","fr":"jacquard (en rond)","category":"fabric/colorwork","note":"Carry floats across back.","protected_tokens":[]},
+      {"ru":"протяжки (нить)","en":"floats (strands)","fr":"fils flottants","category":"colorwork","note":"Loose strands on WS; catch if long.","protected_tokens":[]},
+      {"ru":"закрепление протяжек","en":"catching floats","fr":"ancrer les fils flottants","category":"colorwork","note":"Twist to reduce snagging.","protected_tokens":[]},
+  
+      // --- Color changes & ends ---
+      {"ru":"смена цвета в начале ряда","en":"change color at start of row","fr":"changer de couleur en début de rang","category":"instruction","note":"Weave tails neatly.","protected_tokens":[]},
+      {"ru":"по схеме/по карте узора","en":"work from chart","fr":"suivre la grille","category":"instruction","note":"Chart governs stitches; text is helper.","protected_tokens":[]},
+  
+      // --- Conversions & protected punctuation tokens ---
+      {"ru":"скобки () используются для группировки","en":"parentheses () group sub‑steps","fr":"les parenthèses () regroupent des étapes","category":"notation","note":"Do not alter parentheses groups.","protected_tokens":["(",")"]},
+      {"ru":"квадратные скобки [] для повторов","en":"square brackets [] mark repeats","fr":"crochets [] indiquent des répétitions","category":"notation","note":"Keep brackets and content unchanged.","protected_tokens":["[","]"]},
+      {"ru":"звёздочки * для повторов","en":"asterisks * denote repeat","fr":"astérisques * pour répétition","category":"notation","note":"Maintain placement of * markers.","protected_tokens":["*"]},
+      {"ru":"умножение × в плотности","en":"multiplication sign × in gauge","fr":"signe × dans l’échantillon","category":"notation","note":"Use × not x for clarity when possible.","protected_tokens":["×"]}
+    ]
+  }
+  

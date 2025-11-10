@@ -1,0 +1,57 @@
+[tool.poetry]
+name = "kps"
+version = "2.0.0"
+description = "Knitting Pattern System v2.0 - Production-ready PDF localization pipeline"
+authors = ["KPS Team"]
+readme = "README.md"
+packages = [{include = "kps"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+docling = ">=2.0.0"
+pymupdf = ">=1.23.0"
+openai = ">=1.0.0"
+typer = {extras = ["all"], version = ">=0.12.0"}
+pydantic = ">=2.0.0"
+pyyaml = ">=6.0"
+pillow = ">=10.0.0"
+camelot-py = {extras = ["cv"], version = ">=0.11.0"}
+pdfplumber = ">=0.10.0"
+python-dotenv = ">=1.0.0"
+scikit-learn = ">=1.3.0"
+numpy = ">=1.24.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+pytest-asyncio = ">=0.23.0"
+pytest-cov = ">=4.1.0"
+black = ">=24.0.0"
+ruff = ">=0.3.0"
+mypy = ">=1.9.0"
+
+[tool.poetry.scripts]
+kps = "kps.cli:app"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v --cov=kps --cov-report=html --cov-report=term"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

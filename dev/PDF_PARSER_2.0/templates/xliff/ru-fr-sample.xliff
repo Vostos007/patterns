@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2">
+  <file source-language="ru" target-language="fr" datatype="plaintext" original="bonjour-gants">
+    <body>
+      <trans-unit id="title">
+        <source>Перчатки BONJOUR</source>
+        <target>Gants BONJOUR</target>
+      </trans-unit>
+      <trans-unit id="materials-title">
+        <source>МАТЕРИАЛЫ</source>
+        <target>MATÉRIAUX</target>
+      </trans-unit>
+      <trans-unit id="materials-1">
+        <source>Круговые спицы 2,25 мм</source>
+        <target>Aiguilles circulaires 2,25 mm</target>
+      </trans-unit>
+      <trans-unit id="gauge">
+        <source>ПЛОТНОСТЬ: 30 петель на 42 ряда = 10×10 см</source>
+        <target>ÉCHANTILLON : 30 m et 42 r = 10×10 cm</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

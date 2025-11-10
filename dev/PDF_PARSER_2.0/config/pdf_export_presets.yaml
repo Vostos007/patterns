@@ -1,0 +1,404 @@
+# PDF Export Presets Configuration
+# KPS v2.0 - InDesign PDF/X-4 Export System
+#
+# This file defines custom PDF export presets for InDesign.
+# Each preset specifies complete export settings for different use cases.
+
+version: "1.0"
+generated_at: "2025-11-06"
+
+presets:
+  # ========================================
+  # Print Production Presets
+  # ========================================
+
+  magazine_print:
+    description: "High-quality magazine printing (PDF/X-4, CMYK, no compression)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Commercial magazine production"
+    settings:
+      # Standard
+      pdf_standard: "PDF/X-4:2010"
+      compatibility: "Acrobat 7 (PDF 1.6)"
+
+      # Color Management
+      color_space: "CMYK"
+      output_intent: "Coated FOGRA39 (ISO 12647-2:2004)"
+      include_icc_profile: true
+      simulate_overprint: true
+
+      # Image Quality
+      image_quality: "Maximum"
+      compression: "JPEG"
+      jpeg_quality: 12
+      downsample_images: false
+      resolution_threshold: 450
+
+      # Marks and Bleeds
+      include_bleed: true
+      use_document_bleed: true
+      bleed_top: 3.0
+      bleed_bottom: 3.0
+      bleed_left: 3.0
+      bleed_right: 3.0
+      crop_marks: true
+      bleed_marks: true
+      registration_marks: true
+      color_bars: true
+      page_information: true
+      mark_weight: 0.25
+      mark_offset: 3.0
+
+      # Pages
+      page_range: "All"
+      spreads: false
+
+      # Fonts
+      embed_fonts: true
+      subset_fonts_threshold: 100
+
+      # Advanced
+      create_acrobat_layers: true
+      include_structure: true
+      include_bookmarks: true
+      include_hyperlinks: false
+      transparency_flattener_preset: "High Resolution"
+      optimize_pdf: true
+      create_tagged_pdf: true
+
+  catalog_print:
+    description: "Product catalog printing (PDF/X-4, optimized for color accuracy)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Product catalogs with color-critical images"
+    settings:
+      pdf_standard: "PDF/X-4:2010"
+      color_space: "CMYK"
+      output_intent: "Coated FOGRA39 (ISO 12647-2:2004)"
+      image_quality: "Maximum"
+      compression: "ZIP"  # Lossless for product images
+      downsample_images: false
+      include_bleed: true
+      crop_marks: true
+      registration_marks: true
+      transparency_flattener_preset: "High Resolution"
+      optimize_pdf: true
+
+  newspaper_print:
+    description: "Newspaper printing (PDF/X-1a, lower quality for newsprint)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Newspaper production"
+    settings:
+      pdf_standard: "PDF/X-1a:2001"
+      color_space: "CMYK"
+      output_intent: "ISOnewspaper26v4"
+      image_quality: "Medium"
+      compression: "JPEG"
+      jpeg_quality: 7
+      downsample_images: true
+      downsample_color_to: 200
+      downsample_grayscale_to: 200
+      resolution_threshold: 300
+      include_bleed: true
+      bleed_top: 3.0
+      bleed_bottom: 3.0
+      crop_marks: false
+      registration_marks: false
+      transparency_flattener_preset: "Medium Resolution"
+      optimize_pdf: true
+
+  book_interior:
+    description: "Book interior printing (PDF/X-4, grayscale-friendly)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Book interiors with minimal images"
+    settings:
+      pdf_standard: "PDF/X-4:2010"
+      color_space: "CMYK"
+      output_intent: "Coated FOGRA39 (ISO 12647-2:2004)"
+      image_quality: "High"
+      compression: "JPEG"
+      jpeg_quality: 10
+      downsample_images: true
+      downsample_color_to: 300
+      downsample_grayscale_to: 300
+      include_bleed: true
+      bleed_top: 3.0
+      bleed_bottom: 3.0
+      bleed_left: 3.0
+      bleed_right: 3.0
+      crop_marks: false
+      registration_marks: false
+      page_information: true
+      spreads: true  # For book spreads
+      transparency_flattener_preset: "High Resolution"
+      optimize_pdf: true
+
+  # ========================================
+  # Digital/Screen Presets
+  # ========================================
+
+  interactive_pdf:
+    description: "Interactive PDF with hyperlinks (screen optimized)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Digital publications with navigation"
+    settings:
+      pdf_standard: "High Quality Print"
+      color_space: "RGB"
+      image_quality: "High"
+      compression: "JPEG"
+      jpeg_quality: 9
+      downsample_images: true
+      downsample_color_to: 150
+      resolution_threshold: 225
+      include_bleed: false
+      crop_marks: false
+      registration_marks: false
+      color_bars: false
+      include_bookmarks: true
+      include_hyperlinks: true
+      include_structure: true
+      optimize_for_fast_web_view: true
+      optimize_pdf: true
+      create_tagged_pdf: true
+      view_pdf_after_export: false
+
+  email_proof:
+    description: "Low-resolution proof for email review"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Quick proofs for client review"
+    settings:
+      pdf_standard: "High Quality Print"
+      color_space: "RGB"
+      image_quality: "Medium"
+      compression: "JPEG"
+      jpeg_quality: 6
+      downsample_images: true
+      downsample_color_to: 100
+      downsample_grayscale_to: 100
+      resolution_threshold: 150
+      include_bleed: false
+      crop_marks: false
+      registration_marks: false
+      transparency_flattener_preset: "Medium Resolution"
+      optimize_pdf: true
+      optimize_for_fast_web_view: true
+      generate_thumbnails: true
+
+  presentation:
+    description: "Presentation PDF (RGB, screen-optimized)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Presentations and slideshows"
+    settings:
+      pdf_standard: "High Quality Print"
+      color_space: "RGB"
+      image_quality: "High"
+      compression: "JPEG"
+      jpeg_quality: 8
+      downsample_images: true
+      downsample_color_to: 150
+      include_bleed: false
+      spreads: false
+      include_bookmarks: true
+      include_hyperlinks: true
+      optimize_for_fast_web_view: true
+      optimize_pdf: true
+      view_pdf_after_export: false
+
+  # ========================================
+  # Special Purpose Presets
+  # ========================================
+
+  archive_quality:
+    description: "Archival quality (PDF/A-1b, maximum preservation)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Long-term archival storage"
+    settings:
+      pdf_standard: "PDF/A-1b:2005"
+      color_space: "CMYK"
+      output_intent: "Coated FOGRA39 (ISO 12647-2:2004)"
+      image_quality: "Maximum"
+      compression: "ZIP"  # Lossless
+      downsample_images: false
+      include_bleed: true
+      embed_fonts: true
+      subset_fonts_threshold: 0  # Always embed full fonts for archival
+      include_structure: true
+      include_metadata: true
+      create_tagged_pdf: true
+      optimize_pdf: false  # Preserve all data
+
+  prepress_check:
+    description: "Prepress checking with all marks"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Final prepress verification"
+    settings:
+      pdf_standard: "PDF/X-4:2010"
+      color_space: "CMYK"
+      output_intent: "Coated FOGRA39 (ISO 12647-2:2004)"
+      image_quality: "Maximum"
+      compression: "JPEG"
+      jpeg_quality: 12
+      downsample_images: false
+      include_bleed: true
+      use_document_bleed: true
+      crop_marks: true
+      bleed_marks: true
+      registration_marks: true
+      color_bars: true
+      page_information: true
+      mark_weight: 0.25
+      transparency_flattener_preset: "High Resolution"
+      optimize_pdf: true
+      create_acrobat_layers: true
+
+  draft_internal:
+    description: "Fast draft for internal review (minimum quality)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Quick internal drafts"
+    settings:
+      pdf_standard: "High Quality Print"
+      color_space: "RGB"
+      image_quality: "Low"
+      compression: "JPEG"
+      jpeg_quality: 3
+      downsample_images: true
+      downsample_color_to: 72
+      downsample_grayscale_to: 72
+      resolution_threshold: 100
+      include_bleed: false
+      crop_marks: false
+      transparency_flattener_preset: "Low Resolution"
+      optimize_pdf: false
+      generate_thumbnails: false
+      view_pdf_after_export: false
+
+  # ========================================
+  # Region-Specific Presets
+  # ========================================
+
+  europe_print:
+    description: "European print standard (FOGRA39)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "European commercial printing"
+    settings:
+      pdf_standard: "PDF/X-4:2010"
+      color_space: "CMYK"
+      output_intent: "Coated FOGRA39 (ISO 12647-2:2004)"
+      image_quality: "Maximum"
+      compression: "JPEG"
+      jpeg_quality: 12
+      include_bleed: true
+      bleed_top: 3.0
+      bleed_bottom: 3.0
+      bleed_left: 3.0
+      bleed_right: 3.0
+      crop_marks: true
+      registration_marks: true
+      transparency_flattener_preset: "High Resolution"
+
+  us_print:
+    description: "US print standard (GRACoL)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "US commercial printing"
+    settings:
+      pdf_standard: "PDF/X-4:2010"
+      color_space: "CMYK"
+      output_intent: "US Web Coated (SWOP) v2"
+      image_quality: "Maximum"
+      compression: "JPEG"
+      jpeg_quality: 12
+      include_bleed: true
+      bleed_top: 3.175  # 0.125 inches
+      bleed_bottom: 3.175
+      bleed_left: 3.175
+      bleed_right: 3.175
+      crop_marks: true
+      registration_marks: true
+      transparency_flattener_preset: "High Resolution"
+
+  japan_print:
+    description: "Japanese print standard (Japan Color 2001)"
+    author: "KPS v2.0"
+    version: "1.0"
+    use_case: "Japanese commercial printing"
+    settings:
+      pdf_standard: "PDF/X-4:2010"
+      color_space: "CMYK"
+      output_intent: "Japan Color 2001 Coated"
+      image_quality: "Maximum"
+      compression: "JPEG"
+      jpeg_quality: 12
+      include_bleed: true
+      bleed_top: 3.0
+      bleed_bottom: 3.0
+      bleed_left: 3.0
+      bleed_right: 3.0
+      crop_marks: true
+      registration_marks: true
+      transparency_flattener_preset: "High Resolution"
+
+# ========================================
+# Preset Groups for Easy Selection
+# ========================================
+
+preset_groups:
+  print_production:
+    - magazine_print
+    - catalog_print
+    - newspaper_print
+    - book_interior
+    - prepress_check
+
+  digital_screen:
+    - interactive_pdf
+    - email_proof
+    - presentation
+
+  special_purpose:
+    - archive_quality
+    - draft_internal
+
+  regional:
+    - europe_print
+    - us_print
+    - japan_print
+
+# ========================================
+# Validation Profiles
+# ========================================
+
+validation_profiles:
+  strict_pdfx4:
+    description: "Strict PDF/X-4 compliance"
+    require_output_intent: true
+    require_all_fonts_embedded: true
+    min_image_resolution: 300
+    allow_transparency: true
+    require_bleed: true
+
+  standard_print:
+    description: "Standard print quality"
+    require_output_intent: true
+    require_all_fonts_embedded: true
+    min_image_resolution: 250
+    allow_transparency: true
+    require_bleed: false
+
+  screen_optimized:
+    description: "Screen/digital viewing"
+    require_output_intent: false
+    require_all_fonts_embedded: false
+    min_image_resolution: 150
+    allow_transparency: true
+    require_bleed: false

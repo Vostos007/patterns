@@ -1,0 +1,178 @@
+# Knitting Glossary for KPS v2.0
+# Multi-language translations for knitting terminology (RU → EN, FR)
+
+metadata:
+  version: "1.0.0"
+  domain: "knitting"
+  last_updated: "2025-11-06"
+  languages:
+    - ru
+    - en
+    - fr
+
+# Knitting abbreviations (common stitch abbreviations)
+abbreviations:
+  k:
+    ru: "лиц"
+    en: "k"
+    fr: "m"
+    description: "Knit stitch / Лицевая петля"
+
+  p:
+    ru: "изн"
+    en: "p"
+    fr: "e"
+    description: "Purl stitch / Изнаночная петля"
+
+  yo:
+    ru: "н"
+    en: "yo"
+    fr: "j"
+    description: "Yarn over / Накид"
+
+  k2tog:
+    ru: "2вм лиц"
+    en: "k2tog"
+    fr: "2 m ens end"
+    description: "Knit 2 together / 2 вместе лицевой"
+
+  ssk:
+    ru: "2вм с накл влево"
+    en: "ssk"
+    fr: "surjet simple"
+    description: "Slip, slip, knit / 2 вместе с наклоном влево"
+
+  m1r:
+    ru: "ПрП"
+    en: "M1R"
+    fr: "M1R"
+    description: "Make one right / Прибавка из протяжки вправо"
+    protected_tokens: ["M1R", "ПрП"]
+
+  m1l:
+    ru: "ПрЛ"
+    en: "M1L"
+    fr: "M1L"
+    description: "Make one left / Прибавка из протяжки влево"
+    protected_tokens: ["M1L", "ПрЛ"]
+
+# Knitting terms (techniques and concepts)
+terms:
+  stockinette:
+    ru: "Лицевая гладь"
+    en: "Stockinette stitch"
+    fr: "Jersey endroit"
+    description: "В круговом вязании — все петли лицевыми"
+
+  purl_stitch:
+    ru: "Изнаночная"
+    en: "Purl"
+    fr: "Envers"
+
+  rib_1x1:
+    ru: "Резинка 1x1"
+    en: "1x1 rib"
+    fr: "Côtes 1x1"
+
+  cast_on:
+    ru: "Набор петель"
+    en: "Cast on"
+    fr: "Montage des mailles"
+
+  bind_off:
+    ru: "Закрытие петель"
+    en: "Bind off"
+    fr: "Rabattage des mailles"
+
+  thumb_gusset:
+    ru: "Клин большого пальца"
+    en: "Thumb gusset"
+    fr: "Gousset du pouce"
+
+  gauge:
+    ru: "Плотность"
+    en: "Gauge"
+    fr: "Échantillon"
+
+  pattern:
+    ru: "Схема"
+    en: "Pattern"
+    fr: "Modèle"
+
+  round:
+    ru: "ряд"
+    en: "round"
+    fr: "tour"
+    description: "For circular knitting / Для кругового вязания"
+
+  row:
+    ru: "ряд"
+    en: "row"
+    fr: "rang"
+    description: "For flat knitting / Для плоского вязания"
+
+  stitch_marker:
+    ru: "Маркер"
+    en: "Stitch marker"
+    fr: "Marqueur"
+
+  tapestry_needle:
+    ru: "Игла для сшивания"
+    en: "Tapestry needle"
+    fr: "Aiguille à laine"
+
+  circular_needles:
+    ru: "Круговые спицы"
+    en: "Circular needles"
+    fr: "Aiguilles circulaires"
+
+  dpn:
+    ru: "Чулочные спицы"
+    en: "Double-pointed needles"
+    fr: "Aiguilles à double pointe"
+    protected_tokens: ["DPN"]
+
+# Measurement units
+units:
+  cm:
+    ru: "см"
+    en: "cm"
+    fr: "cm"
+
+  mm:
+    ru: "мм"
+    en: "mm"
+    fr: "mm"
+
+  inch:
+    ru: "дюйм"
+    en: "inch"
+    fr: "pouce"
+
+  g:
+    ru: "г"
+    en: "g"
+    fr: "g"
+
+  m:
+    ru: "м"
+    en: "m"
+    fr: "m"
+    description: "meters / метры"
+
+  yd:
+    ru: "ярд"
+    en: "yd"
+    fr: "yd"
+
+# Protected tokens (brand names, technical terms)
+protected_tokens:
+  - "Malabrigo"
+  - "Cascade"
+  - "KnitPicks"
+  - "Ravelry"
+  - "M1R"
+  - "M1L"
+  - "DPN"
+  - "ПрП"
+  - "ПрЛ"

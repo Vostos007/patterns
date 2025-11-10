@@ -1,0 +1,111 @@
+{
+  "document_slug": "test-knitting-pattern",
+  "source_pdf": "test_pattern.pdf",
+  "total_pages": 2,
+  "page_size": {
+    "width": 595.28,
+    "height": 841.89
+  },
+  "assets": [
+    {
+      "asset_id": "img-stitch01-p0-occ1",
+      "asset_type": "image",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "file_path": "assets/img-stitch01.png",
+      "image_width": 800,
+      "image_height": 600,
+      "page_number": 0,
+      "bbox": [100.0, 200.0, 300.0, 400.0],
+      "ctm": [1.0, 0.0, 0.0, 1.0, 100.0, 200.0],
+      "occurrence": 1,
+      "anchor_to": "paragraph.materials.001",
+      "column_id": 0,
+      "normalized_bbox": {
+        "x": 0.1,
+        "y": 0.2,
+        "width": 0.4,
+        "height": 0.3
+      }
+    },
+    {
+      "asset_id": "img-diagram-p0-occ1",
+      "asset_type": "image",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "file_path": "assets/img-diagram.png",
+      "image_width": 1024,
+      "image_height": 768,
+      "page_number": 0,
+      "bbox": [350.0, 250.0, 550.0, 450.0],
+      "ctm": [1.0, 0.0, 0.0, 1.0, 350.0, 250.0],
+      "occurrence": 1,
+      "anchor_to": "paragraph.techniques.002",
+      "column_id": 1,
+      "normalized_bbox": {
+        "x": 0.5,
+        "y": 0.3,
+        "width": 0.4,
+        "height": 0.3
+      }
+    },
+    {
+      "asset_id": "vec-chart01-p1-occ1",
+      "asset_type": "vector",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "file_path": "assets/vec-chart01.pdf",
+      "page_number": 1,
+      "bbox": [100.0, 300.0, 400.0, 500.0],
+      "ctm": [1.0, 0.0, 0.0, 1.0, 100.0, 300.0],
+      "occurrence": 1,
+      "anchor_to": "paragraph.instructions.005",
+      "column_id": 0,
+      "normalized_bbox": {
+        "x": 0.15,
+        "y": 0.4,
+        "width": 0.5,
+        "height": 0.3
+      }
+    },
+    {
+      "asset_id": "tbl-sizes01-p1-occ1",
+      "asset_type": "table",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "file_path": "assets/tbl-sizes01.png",
+      "image_width": 600,
+      "image_height": 400,
+      "page_number": 1,
+      "bbox": [350.0, 400.0, 550.0, 600.0],
+      "ctm": [1.0, 0.0, 0.0, 1.0, 350.0, 400.0],
+      "occurrence": 1,
+      "anchor_to": "paragraph.sizing.001",
+      "column_id": 1,
+      "normalized_bbox": {
+        "x": 0.55,
+        "y": 0.5,
+        "width": 0.35,
+        "height": 0.3
+      }
+    }
+  ],
+  "columns": [
+    {
+      "column_id": 0,
+      "x_min": 50.0,
+      "x_max": 300.0,
+      "y_min": 100.0,
+      "y_max": 700.0
+    },
+    {
+      "column_id": 1,
+      "x_min": 330.0,
+      "x_max": 580.0,
+      "y_min": 100.0,
+      "y_max": 700.0
+    }
+  ],
+  "metadata": {
+    "title": "Test Knitting Pattern",
+    "author": "Test Author",
+    "language": "en",
+    "created_at": "2025-01-06T12:00:00Z"
+  }
+}
