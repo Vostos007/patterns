@@ -75,6 +75,10 @@ from kps.export import (
     render_html,
     render_pdf,
     load_pdf_style_map,
+    render_docx_from_docling,
+    render_html_from_docling,
+    render_markdown_from_docling,
+    render_pdf_from_docling,
 )
 from kps.export.docling_writer import apply_translations
 
@@ -693,6 +697,22 @@ class UnifiedPipeline:
     ) -> None:
         fmt_lower = fmt.lower()
 
+        if docling_document:
+            if fmt_lower == "docx":
+                reference_doc = self._resolve_docx_reference()
+                render_docx_from_docling(docling_document, output_file, reference_doc)
+                return
+            if fmt_lower == "pdf":
+                css_path = self._resolve_pdf_css()
+                render_pdf_from_docling(docling_document, output_file, css_path)
+                return
+            if fmt_lower in {"markdown", "md"}:
+                render_markdown_from_docling(docling_document, output_file)
+                return
+            if fmt_lower == "html":
+                render_html_from_docling(docling_document, output_file)
+                return
+
         if fmt_lower == "docx":
             if original_input.suffix.lower() == ".docx" and original_input.exists():
                 render_docx_inplace(
@@ -731,15 +751,10 @@ class UnifiedPipeline:
         raise ValueError(f"Unsupported export format: {fmt}")
 
     def _resolve_pdf_css(self) -> Optional[Path]:
-        if not self.style_map_path or not self.style_map_path.exists():
+        contract = self._get_style_contract()
+        if not contract:
             return None
-        if self._style_contract_cache is None:
-            try:
-                self._style_contract_cache = load_pdf_style_map(self.style_map_path)
-            except Exception as exc:
-                logger.warning("Failed to load style map %s: %s", self.style_map_path, exc)
-                self._style_contract_cache = {}
-        pdf_cfg = (self._style_contract_cache or {}).get("pdf", {})
+        pdf_cfg = contract.get("pdf", {})
         css_rel = pdf_cfg.get("css")
         if css_rel:
             candidate = (self.style_map_path.parent / css_rel).resolve()
@@ -747,6 +762,30 @@ class UnifiedPipeline:
                 return candidate
         default_css = self.style_map_path.parent / "pdf.css"
         return default_css if default_css.exists() else None
+
+    def _resolve_docx_reference(self) -> Optional[Path]:
+        contract = self._get_style_contract()
+        if not contract:
+            return None
+        docx_cfg = contract.get("docx", {})
+        ref_rel = docx_cfg.get("reference_docx")
+        if ref_rel:
+            candidate = (self.style_map_path.parent / ref_rel).resolve()
+            if candidate.exists():
+                return candidate
+        default_ref = self.style_map_path.parent / "reference.docx"
+        return default_ref if default_ref.exists() else None
+
+    def _get_style_contract(self) -> Dict:
+        if not self.style_map_path or not self.style_map_path.exists():
+            return {}
+        if self._style_contract_cache is None:
+            try:
+                self._style_contract_cache = load_pdf_style_map(self.style_map_path)
+            except Exception as exc:
+                logger.warning("Failed to load style map %s: %s", self.style_map_path, exc)
+                self._style_contract_cache = {}
+        return self._style_contract_cache or {}
 
     def _export_json(self, segments: List[str], output_file: Path):
         """Экспорт в JSON."""
