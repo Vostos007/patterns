@@ -1,0 +1,492 @@
+# KPS InDesign Master Template - Complete Style Specification
+# This file defines all paragraph and character styles for knitting patterns
+
+metadata:
+  version: "2.0"
+  template_name: "KPS Knitting Pattern Master Template"
+  author: "KPS System"
+  last_updated: "2025-11-10"
+  indesign_version: "2024 (19.0)"
+  languages:
+    - ru
+    - en
+    - fr
+
+# Document Settings
+document:
+  page_size:
+    width: 595.28  # A4 width in points (210mm)
+    height: 841.89  # A4 height in points (297mm)
+
+  margins:
+    top: 62.36      # 22mm
+    bottom: 62.36
+    left: 62.36
+    right: 62.36
+
+  columns:
+    count: 1
+    gutter: 17.01  # 6mm
+
+  baseline_grid: 12.0  # 12pt grid
+
+# Font Families
+fonts:
+  primary_text:
+    family: "Source Serif 4"
+    fallback: "Noto Serif"
+    weights:
+      regular: "Regular"
+      italic: "Italic"
+      bold: "Semibold"
+      bold_italic: "Semibold Italic"
+
+  headings:
+    family: "Source Sans 3"
+    fallback: "Noto Sans"
+    weights:
+      regular: "Regular"
+      bold: "Semibold"
+      black: "Bold"
+
+  mono:
+    family: "Source Code Pro"
+    fallback: "Courier New"
+    weights:
+      regular: "Regular"
+
+# Paragraph Styles
+paragraph_styles:
+
+  # Main Heading (Pattern Title)
+  Heading1:
+    based_on: "[No Paragraph Style]"
+    font_family: "Source Sans 3"
+    font_style: "Semibold"
+    size: 18
+    leading: 22
+    tracking: 0
+    color: "Black"
+    alignment: "LeftAlign"
+    space_before: 12
+    space_after: 6
+    keep_with_next: true
+    hyphenation: false
+    case: "Normal"
+
+  # Section Heading
+  Heading2:
+    based_on: "Heading1"
+    font_style: "Semibold"
+    size: 14
+    leading: 18
+    space_before: 10
+    space_after: 4
+
+  # Sub-section Heading
+  Heading3:
+    based_on: "Heading2"
+    font_style: "Regular"
+    size: 12
+    leading: 16
+    space_before: 8
+    space_after: 2
+
+  # Body Text
+  BodyText:
+    based_on: "[No Paragraph Style]"
+    font_family: "Source Serif 4"
+    font_style: "Regular"
+    size: 11
+    leading: 14
+    tracking: 0
+    color: "Black"
+    alignment: "LeftAlign"
+    first_line_indent: 0
+    space_before: 0
+    space_after: 0
+    hyphenation: true
+    composer: "Adobe World-Ready Paragraph Composer"
+
+  # Body Text - First Paragraph (no indent)
+  BodyTextFirst:
+    based_on: "BodyText"
+    first_line_indent: 0
+    space_before: 3
+
+  # Body Text - Continuation (with indent)
+  BodyTextContinued:
+    based_on: "BodyText"
+    first_line_indent: 4.23  # 1.5mm indent
+
+  # Materials List
+  MaterialsList:
+    based_on: "BodyText"
+    space_before: 3
+    space_after: 3
+
+  # Gauge/Tension Info
+  GaugeInfo:
+    based_on: "BodyText"
+    font_style: "Italic"
+    space_before: 6
+    space_after: 6
+    background_color: "Paper"
+
+  # Abbreviations
+  Abbreviations:
+    based_on: "BodyText"
+    size: 10
+    leading: 13
+    font_family: "Source Code Pro"
+
+  # Notes/Tips
+  Note:
+    based_on: "BodyText"
+    font_style: "Italic"
+    size: 10
+    leading: 13
+    space_before: 6
+    space_after: 6
+    left_indent: 8.5   # 3mm
+    right_indent: 8.5
+    background_color: "Light Gray 20%"
+
+  # Figure Caption
+  FigureCaption:
+    based_on: "[No Paragraph Style]"
+    font_family: "Source Serif 4"
+    font_style: "Italic"
+    size: 9
+    leading: 12
+    color: "Dark Gray 60%"
+    alignment: "CenterAlign"
+    space_before: 4
+    space_after: 8
+
+  # Table Caption
+  TableCaption:
+    based_on: "FigureCaption"
+    alignment: "LeftAlign"
+
+  # Bulleted List
+  ListBullet:
+    based_on: "BodyText"
+    left_indent: 17.01   # 6mm
+    first_line_indent: -8.5  # Hanging indent
+    space_after: 2
+    bullet_character: "•"
+
+  # Numbered List
+  ListNumbered:
+    based_on: "ListBullet"
+    numbering_format: "1. "
+    numbering_style: "Arabic"
+
+  # Row Instructions (knitting rows)
+  RowInstruction:
+    based_on: "BodyText"
+    font_family: "Source Code Pro"
+    size: 10
+    leading: 14
+    left_indent: 8.5
+    first_line_indent: -8.5  # Hanging for row numbers
+
+  # Pattern Repeat
+  PatternRepeat:
+    based_on: "BodyText"
+    font_style: "Italic"
+    left_indent: 17.01   # Indented for nested repeats
+
+  # Sizing Options
+  SizingOption:
+    based_on: "BodyText"
+    font_style: "Semibold"
+    space_before: 6
+    space_after: 3
+
+# Character Styles
+character_styles:
+
+  # Emphasis (italic)
+  Emphasis:
+    based_on: "[None]"
+    font_style: "Italic"
+
+  # Strong (bold)
+  Strong:
+    based_on: "[None]"
+    font_style: "Semibold"
+
+  # Abbreviation (for knitting abbreviations)
+  Abbreviation:
+    based_on: "[None]"
+    font_family: "Source Code Pro"
+    size: "90%"  # 90% of paragraph size
+
+  # Numbers (measurements)
+  Number:
+    based_on: "[None]"
+    font_family: "Source Code Pro"
+    no_break: true
+
+  # Technical Term
+  TechnicalTerm:
+    based_on: "[None]"
+    font_style: "Italic"
+    color: "Dark Blue"
+
+  # Hyperlink
+  Hyperlink:
+    based_on: "[None]"
+    color: "Blue"
+    underline: true
+
+  # Stitch Pattern Name
+  StitchPattern:
+    based_on: "[None]"
+    font_style: "Semibold Italic"
+
+  # Size Indicator
+  SizeIndicator:
+    based_on: "[None]"
+    font_style: "Semibold"
+    color: "Dark Red"
+
+  # Repeat Marker
+  RepeatMarker:
+    based_on: "[None]"
+    font_family: "Source Code Pro"
+    font_style: "Bold"
+
+# Object Styles
+object_styles:
+
+  # Inline Image (small icons, stitch symbols)
+  FigureInline:
+    anchored_position: "InlinePosition"
+    anchor_point: "TopLeftAnchor"
+    horizontal_alignment: "CenterAlign"
+    vertical_reference: "LineBaseline"
+    space_before: "None"
+    space_after: "None"
+    max_width: "85%"  # 85% of column width
+    text_wrap: "None"
+
+  # Block Image (photos, diagrams)
+  FigureBlock:
+    anchored_position: "Anchored"
+    anchor_point: "TopCenterAnchor"
+    horizontal_alignment: "CenterAlign"
+    horizontal_reference: "ColumnEdge"
+    vertical_reference: "LineBaseline"
+    anchor_y_offset: 6
+    space_before: "BoundingBox"
+    space_after: "BoundingBox"
+    max_width: "100%"
+    text_wrap: "BoundingBoxTextWrap"
+    text_wrap_offset: 3
+
+  # Chart/Diagram
+  Chart:
+    anchored_position: "Anchored"
+    anchor_point: "TopLeftAnchor"
+    horizontal_alignment: "LeftAlign"
+    horizontal_reference: "ColumnEdge"
+    vertical_reference: "LineBaseline"
+    anchor_y_offset: 6
+    space_before: "BoundingBox"
+    space_after: "BoundingBox"
+    stroke_weight: 0.5
+    stroke_color: "Light Gray"
+
+  # Stitch Chart
+  StitchChart:
+    based_on: "Chart"
+    fill_color: "White"
+    stroke_weight: 1
+    stroke_color: "Black"
+
+# Table Styles
+table_styles:
+
+  BasicTable:
+    header_rows: 1
+    footer_rows: 0
+    border_weight: 0.5
+    border_color: "Black"
+
+    header:
+      fill_color: "Light Gray 30%"
+      font_style: "Semibold"
+      alignment: "CenterAlign"
+
+    body:
+      fill_color: "White"
+      alternating_rows: true
+      alternating_fill: "Light Gray 10%"
+
+    cell_padding:
+      top: 2
+      bottom: 2
+      left: 3
+      right: 3
+
+  SizingTable:
+    based_on: "BasicTable"
+    header:
+      fill_color: "Dark Gray 40%"
+      font_color: "White"
+
+  MaterialsTable:
+    based_on: "BasicTable"
+    border_weight: 0
+    header:
+      fill_color: "Transparent"
+      font_style: "Semibold Italic"
+
+# Color Swatches
+colors:
+  Black:
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 100]
+
+  White:
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 0]
+
+  "Light Gray 10%":
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 10]
+
+  "Light Gray 20%":
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 20]
+
+  "Light Gray 30%":
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 30]
+
+  "Dark Gray 40%":
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 40]
+
+  "Dark Gray 60%":
+    type: "Process"
+    model: "CMYK"
+    values: [0, 0, 0, 60]
+
+  Blue:
+    type: "Process"
+    model: "CMYK"
+    values: [100, 70, 0, 0]
+
+  "Dark Blue":
+    type: "Process"
+    model: "CMYK"
+    values: [100, 70, 0, 20]
+
+  "Dark Red":
+    type: "Process"
+    model: "CMYK"
+    values: [0, 100, 100, 20]
+
+# Content Type Mapping
+# Maps KPS content types to InDesign styles
+content_mapping:
+
+  # Headings
+  section_title: "Heading1"
+  subsection_title: "Heading2"
+  component_title: "Heading3"
+
+  # Body text
+  paragraph: "BodyText"
+  paragraph_first: "BodyTextFirst"
+  paragraph_continued: "BodyTextContinued"
+
+  # Lists
+  bullet_list: "ListBullet"
+  numbered_list: "ListNumbered"
+  materials_list: "MaterialsList"
+
+  # Special content
+  gauge_info: "GaugeInfo"
+  abbreviations: "Abbreviations"
+  note: "Note"
+  tip: "Note"
+  warning: "Note"
+
+  # Instructions
+  row_instruction: "RowInstruction"
+  pattern_repeat: "PatternRepeat"
+  sizing_option: "SizingOption"
+
+  # Captions
+  figure_caption: "FigureCaption"
+  table_caption: "TableCaption"
+  chart_caption: "FigureCaption"
+
+  # Character styles (inline)
+  emphasis: "Emphasis"
+  strong: "Strong"
+  abbreviation: "Abbreviation"
+  number: "Number"
+  technical_term: "TechnicalTerm"
+  stitch_pattern: "StitchPattern"
+  size_indicator: "SizeIndicator"
+
+# Language-specific Settings
+language_settings:
+  ru:
+    hyphenation_dictionary: "Russian"
+    composer: "Adobe World-Ready Paragraph Composer"
+    quotes:
+      opening_double: "«"
+      closing_double: "»"
+      opening_single: "‹"
+      closing_single: "›"
+
+  en:
+    hyphenation_dictionary: "English: UK"
+    composer: "Adobe Paragraph Composer"
+    quotes:
+      opening_double: """
+      closing_double: """
+      opening_single: "'"
+      closing_single: "'"
+
+  fr:
+    hyphenation_dictionary: "French"
+    composer: "Adobe World-Ready Paragraph Composer"
+    quotes:
+      opening_double: "«"
+      closing_double: "»"
+      opening_single: "‹"
+      closing_single: "›"
+
+# Export Presets
+export_presets:
+  print:
+    pdf_standard: "PDF/X-4"
+    color_space: "CMYK"
+    image_quality: "Maximum"
+    embed_fonts: true
+
+  web:
+    pdf_standard: "PDF 1.7"
+    color_space: "RGB"
+    image_quality: "High"
+    optimize_for_web: true
+
+  draft:
+    pdf_standard: "PDF 1.4"
+    color_space: "RGB"
+    image_quality: "Medium"
+    compress_images: true

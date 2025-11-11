@@ -1,0 +1,35 @@
+/* CSS Paged Media для печатного PDF (A4) */
+
+@page {
+  size: A4;
+  margin: 20mm 18mm 22mm 18mm;
+  @top-left    { content: string(doc_title) }
+  @top-right   { content: "Page " counter(page) " / " counter(pages) }
+  @bottom-left { content: string(section) }
+  @bottom-right{ content: date() }
+}
+
+:root {
+  --text: #111;
+  --muted: #555;
+  --rule: #666;
+}
+
+body { font-family: "Noto Serif", serif; color: var(--text); line-height: 1.38; }
+h1 { string-set: doc_title content(); page-break-before: always; }
+h2 { string-set: section content(); margin-top: 1.2em; }
+h3 { margin-top: 1em; }
+p  { orphans: 3; widows: 3; }
+
+a   { color: var(--muted); text-decoration: none; }
+pre, code { font-family: "Noto Sans Mono", monospace; }
+
+table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; }
+th, td { border: 1px solid var(--rule); padding: 4px 6px; vertical-align: top; }
+thead th { background: #f4f4f4; }
+
+img { max-width: 100%; page-break-inside: avoid; }
+figure { margin: 10px 0 16px; }
+figcaption { color: var(--muted); font-size: 0.9em; text-align: center; }
+
+ul, ol { margin: 0.5em 0 0.8em 1.4em; }

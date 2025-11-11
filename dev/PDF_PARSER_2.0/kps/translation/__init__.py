@@ -1,5 +1,50 @@
-"""Translation pipeline for KPS v2.0."""
+"""
+Fast and simple glossary-driven translation for KPS v2.0.
 
+RECOMMENDED: Use GlossaryTranslator for fast, efficient translation.
+
+This package provides:
+- GlossaryTranslator: Simple, fast glossary-driven translation (RECOMMENDED)
+- TranslationOrchestrator: Core translation engine
+- GlossaryManager: Glossary term management
+
+For advanced features (multi-stage pipeline, verification, routing),
+import from submodules if needed.
+"""
+
+# RECOMMENDED: Simple and fast
+from .glossary_translator import GlossaryTranslator, TranslationResult as SimpleResult
+from .translation_memory import (
+    TranslationMemory,
+    TranslationMemoryEntry,
+    SuggestedGlossaryTerm,
+)
+
+# Term validation (P2)
+from .term_validator import (
+    TermRule,
+    TermValidator,
+    Violation,
+    load_rules_from_glossary,
+)
+from .structured_translator import (
+    StructuredTranslator,
+    StructuredTranslationResult,
+)
+
+# Advanced: Semantic memory with embeddings
+try:
+    from .semantic_memory import (
+        SemanticTranslationMemory,
+        SemanticEntry,
+        SimilarTranslation,
+    )
+
+    _SEMANTIC_AVAILABLE = True
+except ImportError:
+    _SEMANTIC_AVAILABLE = False
+
+# Core components
 from .glossary import (
     GlossaryEntry,
     GlossaryManager,
@@ -14,16 +59,89 @@ from .orchestrator import (
     TranslationSegment,
 )
 
+# Advanced components (optional, available if needed)
+try:
+    from .glossary.advanced_matcher import (
+        AdvancedGlossaryMatcher,
+        MatchStrategy,
+        TermOccurrence,
+    )
+    from .language_router import LanguagePair, LanguageRouter, MultiLanguageResult
+    from .multi_stage_pipeline import (
+        MultiStageResult,
+        MultiStageTranslationPipeline,
+        PipelineConfig,
+        SegmentAnalysis,
+        TermMatch,
+        TranslationQuality,
+    )
+    from .verification import (
+        SegmentVerification,
+        TranslationVerifier,
+        VerificationIssue,
+        VerificationReport,
+    )
+
+    _ADVANCED_AVAILABLE = True
+except ImportError:
+    _ADVANCED_AVAILABLE = False
+
+
 __all__ = [
-    # Orchestrator
+    # RECOMMENDED: Simple and fast
+    "GlossaryTranslator",
+    "SimpleResult",
+    "TranslationMemory",
+    "TranslationMemoryEntry",
+    "SuggestedGlossaryTerm",
+    # Term validation (P2)
+    "TermRule",
+    "TermValidator",
+    "Violation",
+    "load_rules_from_glossary",
+    "StructuredTranslator",
+    "StructuredTranslationResult",
+    # Core components
     "TranslationOrchestrator",
     "TranslationSegment",
     "TranslationResult",
     "BatchTranslationResult",
-    # Glossary
     "GlossaryManager",
     "GlossaryEntry",
     "GlossaryMatch",
     "select_glossary_terms",
     "extract_protected_tokens",
 ]
+
+# Add semantic memory to __all__ if available
+if _SEMANTIC_AVAILABLE:
+    __all__.extend(
+        [
+            "SemanticTranslationMemory",
+            "SemanticEntry",
+            "SimilarTranslation",
+        ]
+    )
+
+# Add advanced components to __all__ if available
+if _ADVANCED_AVAILABLE:
+    __all__.extend(
+        [
+            "AdvancedGlossaryMatcher",
+            "MatchStrategy",
+            "TermOccurrence",
+            "MultiStageTranslationPipeline",
+            "MultiStageResult",
+            "PipelineConfig",
+            "TermMatch",
+            "SegmentAnalysis",
+            "TranslationQuality",
+            "TranslationVerifier",
+            "VerificationReport",
+            "SegmentVerification",
+            "VerificationIssue",
+            "LanguageRouter",
+            "LanguagePair",
+            "MultiLanguageResult",
+        ]
+    )
