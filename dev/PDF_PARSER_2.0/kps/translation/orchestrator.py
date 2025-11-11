@@ -29,6 +29,13 @@ except ImportError:  # pragma: no cover
 
 from ..core.placeholders import decode_placeholders, encode_placeholders
 
+# Import term validator for glossary compliance
+try:
+    from .term_validator import TermValidator, Violation
+except ImportError:
+    TermValidator = None  # type: ignore
+    Violation = None  # type: ignore
+
 
 @dataclass
 class TranslationSegment:
@@ -101,6 +108,8 @@ class TranslationOrchestrator:
         max_batch_size: Optional[int] = None,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        term_validator: Optional["TermValidator"] = None,
+        strict_glossary: bool = False,
     ):
         """
         Initialize orchestrator.
@@ -111,17 +120,28 @@ class TranslationOrchestrator:
             max_batch_size: Maximum segments per batch. ``None`` means no limit.
             max_retries: Maximum retry attempts (default: 3)
             retry_delay: Initial retry delay in seconds (default: 1.0)
+            term_validator: Optional TermValidator for glossary compliance (P2)
+            strict_glossary: If True, enforce 100% glossary compliance (default: False)
         """
         self.model = model
         self.max_batch_size = max_batch_size
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.term_validator = term_validator
+        self.strict_glossary = strict_glossary
 
         if openai is not None and api_key:
             openai.api_key = api_key
 
         # Token counting cache
         self._token_cache: Dict[str, int] = {}
+
+        # Metrics for term validation
+        self.validation_metrics = {
+            "violations_detected": 0,
+            "retries_for_terms": 0,
+            "enforcements": 0,
+        }
 
     def _ensure_client(self) -> None:
         if openai is None:
@@ -271,6 +291,15 @@ Translated segments:"""
         if len(translated_segments) != len(segments):
             # Fallback: return original text
             translated_segments = [s.text for s in segments]
+
+        # P2: Validate glossary compliance if term_validator is configured
+        if self.term_validator and self.strict_glossary:
+            translated_segments = self._validate_and_enforce_terms(
+                segments=segments,
+                translated_segments=translated_segments,
+                source_lang=source_lang,
+                target_lang=target_lang,
+            )
 
         return TranslationResult(
             target_language=target_lang,
@@ -692,6 +721,80 @@ Translated segments:"""
             target_lang=target_lang,
             selected_entries=selected_entries,
         )
+
+    def _validate_and_enforce_terms(
+        self,
+        segments: List[TranslationSegment],
+        translated_segments: List[str],
+        source_lang: str,
+        target_lang: str,
+    ) -> List[str]:
+        """
+        Validate and enforce glossary term compliance (P2).
+
+        Steps:
+        1. Validate each segment pair for term violations
+        2. If violations found, log them and update metrics
+        3. Enforce terms using term_validator.enforce()
+
+        Args:
+            segments: Original source segments
+            translated_segments: Translated segments
+            source_lang: Source language code
+            target_lang: Target language code
+
+        Returns:
+            Corrected translated segments with enforced terms
+        """
+        if not self.term_validator:
+            return translated_segments
+
+        import logging
+        logger = logging.getLogger(__name__)
+
+        corrected_segments = []
+        total_violations = 0
+
+        for idx, (src_seg, tgt_text) in enumerate(zip(segments, translated_segments)):
+            # Validate for violations
+            violations = self.term_validator.validate(
+                src_text=src_seg.text,
+                tgt_text=tgt_text,
+                src_lang=source_lang,
+                tgt_lang=target_lang,
+            )
+
+            if violations:
+                total_violations += len(violations)
+                self.validation_metrics["violations_detected"] += len(violations)
+
+                # Log violations
+                logger.warning(
+                    f"Segment {idx}: Found {len(violations)} term violations"
+                )
+                for v in violations:
+                    logger.warning(
+                        f"  - {v.type}: {v.rule.src} → {v.rule.tgt} | {v.suggestion}"
+                    )
+
+                # Enforce terms
+                corrected = self.term_validator.enforce(
+                    tgt_text=tgt_text,
+                    tgt_lang=target_lang,
+                    fix_mode="replace",
+                )
+                corrected_segments.append(corrected)
+                self.validation_metrics["enforcements"] += 1
+            else:
+                corrected_segments.append(tgt_text)
+
+        if total_violations > 0:
+            logger.info(
+                f"Term validation: {total_violations} violations corrected across "
+                f"{len(segments)} segments"
+            )
+
+        return corrected_segments
 
 
 __all__ = [

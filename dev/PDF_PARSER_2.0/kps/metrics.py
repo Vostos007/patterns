@@ -1,335 +1,467 @@
 """
-Prometheus metrics for KPS system.
+Prometheus metrics for KPS translation pipeline (P6).
 
-Provides real-time monitoring of:
-- Document processing (count, latency, errors)
-- Translation metrics (segments, cache hits, cost)
-- Pipeline stages (extraction, segmentation, translation, export)
+Provides:
+- Counters for documents, segments, glossary violations, cache hits
+- Histograms for latency tracking (extraction, translation, export)
+- Gauges for current budget usage
+- HTTP endpoint for Prometheus scraping
+
+Usage:
+    from kps.metrics import (
+        documents_total,
+        translation_cost_usd,
+        glossary_violations_total,
+        track_duration
+    )
+
+    # Counter
+    documents_total.labels(source_lang="ru", target_lang="en").inc()
+
+    # Histogram with context manager
+    with track_duration("extraction"):
+        extract_document()
+
+    # Gauge
+    daily_budget_pct.set(45.5)
 """
 
-from prometheus_client import (
-    Counter,
-    Histogram,
-    Gauge,
-    Info,
-    start_http_server,
+import logging
+import time
+from contextlib import contextmanager
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# Check if prometheus_client is available
+try:
+    from prometheus_client import (
+        Counter,
+        Histogram,
+        Gauge,
+        start_http_server,
+        generate_latest,
+        CONTENT_TYPE_LATEST,
+    )
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    # Stub classes for when prometheus_client is not installed
+    class Counter:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+        def labels(self, **kwargs):
+            return self
+        def inc(self, amount=1):
+            pass
+
+    class Histogram:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+        def labels(self, **kwargs):
+            return self
+        def observe(self, amount):
+            pass
+
+    class Gauge:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+        def set(self, value):
+            pass
+        def inc(self, amount=1):
+            pass
+        def dec(self, amount=1):
+            pass
+
+
+# =============================================================================
+# COUNTERS (累積值 - things that only go up)
+# =============================================================================
+
+# Documents processed
+documents_total = Counter(
+    "kps_documents_total",
+    "Total documents processed",
+    ["source_lang", "target_lang", "status"]  # status: success, error
 )
 
-# Document processing metrics
-DOCUMENTS_PROCESSED = Counter(
-    "kps_documents_processed_total",
-    "Total number of documents processed successfully",
-    ["source_lang", "target_lang"],
+# Segments processed
+segments_total = Counter(
+    "kps_segments_total",
+    "Total segments translated",
+    ["source_lang", "target_lang"]
 )
 
-DOCUMENTS_FAILED = Counter(
-    "kps_documents_failed_total",
-    "Total number of documents that failed processing",
-    ["stage", "error_type"],
+# Glossary violations
+glossary_violations_total = Counter(
+    "kps_glossary_violations_total",
+    "Total glossary term violations detected",
+    ["violation_type", "src_lang", "tgt_lang"]  # violation_type: term_missing, case_mismatch, etc.
 )
 
-DOCUMENT_PROCESSING_TIME = Histogram(
-    "kps_document_processing_seconds",
-    "Time to process a single document end-to-end",
-    ["source_lang"],
-    buckets=[1, 5, 10, 30, 60, 120, 300, 600],
+# Term enforcements
+term_enforcements_total = Counter(
+    "kps_term_enforcements_total",
+    "Total automatic term enforcements applied",
+    ["src_lang", "tgt_lang"]
 )
 
-# Translation metrics
-SEGMENTS_TRANSLATED = Counter(
-    "kps_segments_translated_total",
-    "Total number of segments translated",
-    ["source_lang", "target_lang", "from_cache"],
+# Cache hits/misses
+cache_hits_total = Counter(
+    "kps_cache_hits_total",
+    "Total translation cache hits",
+    ["src_lang", "tgt_lang", "cache_type"]  # cache_type: semantic, exact
 )
 
-TRANSLATION_COST = Counter(
-    "kps_translation_cost_dollars_total",
-    "Total translation cost in dollars",
-    ["model", "target_lang"],
+cache_misses_total = Counter(
+    "kps_cache_misses_total",
+    "Total translation cache misses",
+    ["src_lang", "tgt_lang"]
 )
 
-TRANSLATION_CACHE_HIT_RATE = Gauge(
-    "kps_translation_cache_hit_rate",
-    "Current cache hit rate (0.0-1.0)",
-    ["source_lang", "target_lang"],
+# API calls
+api_calls_total = Counter(
+    "kps_api_calls_total",
+    "Total OpenAI API calls",
+    ["model", "status"]  # status: success, error, rate_limit
 )
 
-# Glossary metrics
-GLOSSARY_TERMS_APPLIED = Counter(
-    "kps_glossary_terms_applied_total",
-    "Number of glossary terms successfully applied",
-    ["source_lang", "target_lang"],
+# Translation cost
+translation_cost_usd = Counter(
+    "kps_translation_cost_usd_total",
+    "Total translation cost in USD",
+    ["model"]
 )
 
-TERM_VIOLATIONS = Counter(
-    "kps_term_violations_total",
-    "Number of glossary term violations detected",
-    ["violation_type", "target_lang"],
-)
-
-# Pipeline stage metrics
-EXTRACTION_DURATION = Histogram(
-    "kps_extraction_duration_seconds",
-    "Time spent in extraction stage",
-    ["extractor"],
-    buckets=[0.5, 1, 2, 5, 10, 30],
-)
-
-SEGMENTATION_DURATION = Histogram(
-    "kps_segmentation_duration_seconds",
-    "Time spent in segmentation stage",
-    buckets=[0.1, 0.5, 1, 2, 5],
-)
-
-TRANSLATION_DURATION = Histogram(
-    "kps_translation_duration_seconds",
-    "Time spent in translation stage",
-    ["target_lang"],
-    buckets=[1, 5, 10, 30, 60, 120],
-)
-
-EXPORT_DURATION = Histogram(
-    "kps_export_duration_seconds",
-    "Time spent in export stage",
-    ["format"],
-    buckets=[0.5, 1, 2, 5, 10, 30],
-)
-
-EXPORTS_TOTAL = Counter(
-    "kps_exports_total",
-    "Total number of exports by format",
-    ["format"],  # docx, pdf, html, md
-)
-
-# Knowledge Base metrics
-KB_SEARCHES = Counter(
-    "kps_kb_searches_total",
-    "Total number of knowledge base searches",
-    ["category", "language"],
-)
-
-KB_ENTRIES = Gauge(
-    "kps_kb_entries_total",
-    "Total number of entries in knowledge base",
-    ["category", "language"],
-)
-
-# Interoperability metrics (TBX/TMX)
-TBX_IMPORTED = Counter(
-    "kps_tbx_imported_total",
-    "Total TBX term pairs imported",
-    ["src_lang", "tgt_lang", "domain"],
-)
-
-TMX_IMPORTED = Counter(
-    "kps_tmx_imported_total",
-    "Total TMX translation pairs imported",
-    ["src_lang", "tgt_lang"],
-)
-
-TBX_EXPORT_DURATION = Histogram(
-    "kps_tbx_export_seconds",
-    "Time spent exporting TBX",
-    buckets=[0.5, 1, 2, 5, 10, 30],
-)
-
-TMX_EXPORT_DURATION = Histogram(
-    "kps_tmx_export_seconds",
-    "Time spent exporting TMX",
-    buckets=[0.5, 1, 2, 5, 10, 30, 60],
-)
-
-# Daemon metrics
-DAEMON_INBOX_FILES = Gauge(
-    "kps_daemon_inbox_files",
-    "Number of files currently in inbox",
-)
-
-DAEMON_PROCESSING_ACTIVE = Gauge(
-    "kps_daemon_processing_active",
-    "Number of documents currently being processed",
-)
-
-DAEMON_UPTIME_SECONDS = Gauge(
-    "kps_daemon_uptime_seconds",
-    "Daemon uptime in seconds",
-)
-
-# System info
-SYSTEM_INFO = Info(
-    "kps_system",
-    "KPS system information",
+# Token usage
+tokens_total = Counter(
+    "kps_tokens_total",
+    "Total tokens processed",
+    ["model", "direction"]  # direction: input, output
 )
 
 
-def expose_metrics(port: int = 9108):
+# =============================================================================
+# HISTOGRAMS (分布 - track distributions of values)
+# =============================================================================
+
+# Latency tracking
+duration_seconds = Histogram(
+    "kps_duration_seconds",
+    "Operation duration in seconds",
+    ["operation"],  # operation: extraction, segmentation, translation, validation, export
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0]
+)
+
+# Segment length distribution
+segment_length_chars = Histogram(
+    "kps_segment_length_chars",
+    "Segment length in characters",
+    ["lang"],
+    buckets=[10, 50, 100, 200, 500, 1000, 2000, 5000]
+)
+
+# Batch size distribution
+batch_size = Histogram(
+    "kps_batch_size",
+    "Number of segments per batch",
+    buckets=[1, 5, 10, 20, 50, 100, 200]
+)
+
+
+# =============================================================================
+# GAUGES (現在値 - track current values that can go up or down)
+# =============================================================================
+
+# Budget usage
+daily_budget_usd = Gauge(
+    "kps_daily_budget_usd",
+    "Daily budget limit in USD"
+)
+
+daily_spent_usd = Gauge(
+    "kps_daily_spent_usd",
+    "Daily spending in USD"
+)
+
+daily_budget_pct = Gauge(
+    "kps_daily_budget_pct",
+    "Daily budget usage percentage"
+)
+
+# Active jobs
+active_jobs = Gauge(
+    "kps_active_jobs",
+    "Number of currently active translation jobs"
+)
+
+# Cache size
+cache_entries = Gauge(
+    "kps_cache_entries",
+    "Number of entries in translation cache",
+    ["cache_type"]  # cache_type: semantic, exact
+)
+
+# Queue size
+queue_size = Gauge(
+    "kps_queue_size",
+    "Number of documents in processing queue"
+)
+
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+@contextmanager
+def track_duration(operation: str):
+    """
+    Context manager to track operation duration.
+
+    Args:
+        operation: Operation name (e.g., "extraction", "translation")
+
+    Example:
+        >>> with track_duration("extraction"):
+        ...     extract_document(pdf_path)
+    """
+    start = time.time()
+    try:
+        yield
+    finally:
+        elapsed = time.time() - start
+        duration_seconds.labels(operation=operation).observe(elapsed)
+
+
+def record_document(source_lang: str, target_lang: str, status: str = "success"):
+    """
+    Record document processing.
+
+    Args:
+        source_lang: Source language code
+        target_lang: Target language code
+        status: Processing status ("success" or "error")
+    """
+    documents_total.labels(
+        source_lang=source_lang,
+        target_lang=target_lang,
+        status=status
+    ).inc()
+
+
+def record_segments(count: int, source_lang: str, target_lang: str):
+    """
+    Record segment translation.
+
+    Args:
+        count: Number of segments
+        source_lang: Source language
+        target_lang: Target language
+    """
+    segments_total.labels(
+        source_lang=source_lang,
+        target_lang=target_lang
+    ).inc(count)
+
+
+def record_violation(violation_type: str, src_lang: str, tgt_lang: str):
+    """
+    Record glossary violation.
+
+    Args:
+        violation_type: Type of violation (e.g., "term_missing", "case_mismatch")
+        src_lang: Source language
+        tgt_lang: Target language
+    """
+    glossary_violations_total.labels(
+        violation_type=violation_type,
+        src_lang=src_lang,
+        tgt_lang=tgt_lang
+    ).inc()
+
+
+def record_enforcement(src_lang: str, tgt_lang: str):
+    """
+    Record term enforcement.
+
+    Args:
+        src_lang: Source language
+        tgt_lang: Target language
+    """
+    term_enforcements_total.labels(
+        src_lang=src_lang,
+        tgt_lang=tgt_lang
+    ).inc()
+
+
+def record_cache_hit(src_lang: str, tgt_lang: str, cache_type: str = "semantic"):
+    """
+    Record cache hit.
+
+    Args:
+        src_lang: Source language
+        tgt_lang: Target language
+        cache_type: Type of cache ("semantic" or "exact")
+    """
+    cache_hits_total.labels(
+        src_lang=src_lang,
+        tgt_lang=tgt_lang,
+        cache_type=cache_type
+    ).inc()
+
+
+def record_cache_miss(src_lang: str, tgt_lang: str):
+    """
+    Record cache miss.
+
+    Args:
+        src_lang: Source language
+        tgt_lang: Target language
+    """
+    cache_misses_total.labels(
+        src_lang=src_lang,
+        tgt_lang=tgt_lang
+    ).inc()
+
+
+def record_api_call(model: str, status: str = "success"):
+    """
+    Record API call.
+
+    Args:
+        model: Model name (e.g., "gpt-4o-mini")
+        status: Call status ("success", "error", "rate_limit")
+    """
+    api_calls_total.labels(
+        model=model,
+        status=status
+    ).inc()
+
+
+def record_cost(model: str, cost_usd: float):
+    """
+    Record translation cost.
+
+    Args:
+        model: Model name
+        cost_usd: Cost in USD
+    """
+    translation_cost_usd.labels(model=model).inc(cost_usd)
+
+
+def record_tokens(model: str, tokens_in: int, tokens_out: int):
+    """
+    Record token usage.
+
+    Args:
+        model: Model name
+        tokens_in: Input tokens
+        tokens_out: Output tokens
+    """
+    tokens_total.labels(model=model, direction="input").inc(tokens_in)
+    tokens_total.labels(model=model, direction="output").inc(tokens_out)
+
+
+def update_budget(daily_limit: float, daily_spent: float):
+    """
+    Update budget metrics.
+
+    Args:
+        daily_limit: Daily budget limit in USD
+        daily_spent: Daily spending in USD
+    """
+    daily_budget_usd.set(daily_limit)
+    daily_spent_usd.set(daily_spent)
+
+    if daily_limit > 0:
+        pct = (daily_spent / daily_limit) * 100
+        daily_budget_pct.set(pct)
+
+
+def start_metrics_server(port: int = 9090):
     """
     Start Prometheus metrics HTTP server.
 
     Args:
-        port: Port to expose metrics on (default: 9108)
+        port: HTTP port (default: 9090)
 
     Example:
-        >>> from kps.metrics import expose_metrics
-        >>> expose_metrics(port=9108)
-        >>> # Metrics available at http://localhost:9108/metrics
+        >>> start_metrics_server(port=9090)
+        Metrics server started on port 9090
     """
-    start_http_server(port)
-    SYSTEM_INFO.info({
-        "version": "2.0.0",
-        "component": "kps",
-        "description": "Knitting Pattern System"
-    })
+    if not PROMETHEUS_AVAILABLE:
+        logger.warning(
+            "prometheus_client not installed. "
+            "Install with: pip install prometheus-client"
+        )
+        return
+
+    try:
+        start_http_server(port)
+        logger.info(f"Prometheus metrics server started on port {port}")
+        logger.info(f"Metrics available at http://localhost:{port}/metrics")
+    except Exception as e:
+        logger.error(f"Failed to start metrics server: {e}")
 
 
-def record_document_processed(source_lang: str, target_lang: str, duration: float):
-    """Record successful document processing."""
-    DOCUMENTS_PROCESSED.labels(source_lang=source_lang, target_lang=target_lang).inc()
-    DOCUMENT_PROCESSING_TIME.labels(source_lang=source_lang).observe(duration)
+def get_metrics_text() -> str:
+    """
+    Get metrics in Prometheus text format.
 
+    Returns:
+        Metrics text (empty if prometheus not available)
 
-def record_document_failed(stage: str, error_type: str):
-    """Record document processing failure."""
-    DOCUMENTS_FAILED.labels(stage=stage, error_type=error_type).inc()
+    Example:
+        >>> metrics = get_metrics_text()
+        >>> print(metrics)
+    """
+    if not PROMETHEUS_AVAILABLE:
+        return ""
 
-
-def record_segments_translated(
-    source_lang: str,
-    target_lang: str,
-    count: int,
-    from_cache: bool
-):
-    """Record translated segments."""
-    cache_label = "true" if from_cache else "false"
-    SEGMENTS_TRANSLATED.labels(
-        source_lang=source_lang,
-        target_lang=target_lang,
-        from_cache=cache_label
-    ).inc(count)
-
-
-def record_translation_cost(model: str, target_lang: str, cost: float):
-    """Record translation cost."""
-    TRANSLATION_COST.labels(model=model, target_lang=target_lang).inc(cost)
-
-
-def set_cache_hit_rate(source_lang: str, target_lang: str, rate: float):
-    """Set current cache hit rate."""
-    TRANSLATION_CACHE_HIT_RATE.labels(
-        source_lang=source_lang,
-        target_lang=target_lang
-    ).set(rate)
-
-
-def record_glossary_term_applied(source_lang: str, target_lang: str):
-    """Record glossary term application."""
-    GLOSSARY_TERMS_APPLIED.labels(
-        source_lang=source_lang,
-        target_lang=target_lang
-    ).inc()
-
-
-def record_term_violation(violation_type: str, target_lang: str, count: int = 1):
-    """Record term violation."""
-    TERM_VIOLATIONS.labels(
-        violation_type=violation_type,
-        target_lang=target_lang
-    ).inc(count)
-
-
-def record_extraction_duration(extractor: str, duration: float):
-    """Record extraction stage duration."""
-    EXTRACTION_DURATION.labels(extractor=extractor).observe(duration)
-
-
-def record_segmentation_duration(duration: float):
-    """Record segmentation stage duration."""
-    SEGMENTATION_DURATION.observe(duration)
-
-
-def record_translation_duration(target_lang: str, duration: float):
-    """Record translation stage duration."""
-    TRANSLATION_DURATION.labels(target_lang=target_lang).observe(duration)
-
-
-def record_export_duration(format: str, duration: float):
-    """Record export stage duration."""
-    EXPORT_DURATION.labels(format=format).observe(duration)
-
-
-def record_export(format: str):
-    """Record successful export by format."""
-    EXPORTS_TOTAL.labels(format=format).inc()
-
-
-def record_kb_search(category: str, language: str):
-    """Record knowledge base search."""
-    KB_SEARCHES.labels(category=category, language=language).inc()
-
-
-def set_kb_entries(category: str, language: str, count: int):
-    """Set knowledge base entry count."""
-    KB_ENTRIES.labels(category=category, language=language).set(count)
-
-
-def record_tbx_import(src_lang: str, tgt_lang: str, domain: str, count: int = 1):
-    """Record TBX term pairs imported."""
-    TBX_IMPORTED.labels(src_lang=src_lang, tgt_lang=tgt_lang, domain=domain).inc(count)
-
-
-def record_tmx_import(src_lang: str, tgt_lang: str, count: int = 1):
-    """Record TMX translation pairs imported."""
-    TMX_IMPORTED.labels(src_lang=src_lang, tgt_lang=tgt_lang).inc(count)
-
-
-def record_tbx_export_duration(duration: float):
-    """Record TBX export duration."""
-    TBX_EXPORT_DURATION.observe(duration)
-
-
-def record_tmx_export_duration(duration: float):
-    """Record TMX export duration."""
-    TMX_EXPORT_DURATION.observe(duration)
-
-
-def set_daemon_inbox_files(count: int):
-    """Set number of files in inbox."""
-    DAEMON_INBOX_FILES.set(count)
-
-
-def set_daemon_processing_active(count: int):
-    """Set number of documents currently being processed."""
-    DAEMON_PROCESSING_ACTIVE.set(count)
-
-
-def set_daemon_uptime(seconds: float):
-    """Set daemon uptime."""
-    DAEMON_UPTIME_SECONDS.set(seconds)
+    try:
+        return generate_latest().decode("utf-8")
+    except Exception as e:
+        logger.error(f"Failed to generate metrics: {e}")
+        return ""
 
 
 __all__ = [
-    # Setup
-    "expose_metrics",
-    # Document metrics
-    "record_document_processed",
-    "record_document_failed",
-    # Translation metrics
-    "record_segments_translated",
-    "record_translation_cost",
-    "set_cache_hit_rate",
-    # Glossary metrics
-    "record_glossary_term_applied",
-    "record_term_violation",
-    # Pipeline stage metrics
-    "record_extraction_duration",
-    "record_segmentation_duration",
-    "record_translation_duration",
-    "record_export_duration",
-    # Knowledge Base metrics
-    "record_kb_search",
-    "set_kb_entries",
-    # Daemon metrics
-    "set_daemon_inbox_files",
-    "set_daemon_processing_active",
-    "set_daemon_uptime",
+    # Counters
+    "documents_total",
+    "segments_total",
+    "glossary_violations_total",
+    "term_enforcements_total",
+    "cache_hits_total",
+    "cache_misses_total",
+    "api_calls_total",
+    "translation_cost_usd",
+    "tokens_total",
+
+    # Histograms
+    "duration_seconds",
+    "segment_length_chars",
+    "batch_size",
+
+    # Gauges
+    "daily_budget_usd",
+    "daily_spent_usd",
+    "daily_budget_pct",
+    "active_jobs",
+    "cache_entries",
+    "queue_size",
+
+    # Helper functions
+    "track_duration",
+    "record_document",
+    "record_segments",
+    "record_violation",
+    "record_enforcement",
+    "record_cache_hit",
+    "record_cache_miss",
+    "record_api_call",
+    "record_cost",
+    "record_tokens",
+    "update_budget",
+    "start_metrics_server",
+    "get_metrics_text",
 ]
