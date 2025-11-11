@@ -18,7 +18,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r dev/PDF_PARSER_2.0/requirements.txt
-          pip install sklearn scikit-learn weasyprint pandocfilters pytest
+          pip install scikit-learn weasyprint pandocfilters pytest
       - name: Run backend tests
         working-directory: dev/PDF_PARSER_2.0
         run: |
