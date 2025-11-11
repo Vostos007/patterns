@@ -7,14 +7,19 @@ Knowledge Base System - обучаемая база знаний о вязани
 Основные компоненты:
 - KnowledgeBase: база знаний с автоматической категоризацией
 - PatternGenerator: генератор описаний изделий на основе знаний
+- DocumentSplitter: умное разбиение документов на секции
+
+ВАЖНО: По умолчанию система разбивает документы на секции!
+Один документ (книга) может содержать узоры, техники, пряжу и т.д.
+Каждая секция категоризируется отдельно.
 
 Example:
     >>> from kps.knowledge import KnowledgeBase, PatternGenerator
     >>>
-    >>> # Загрузить знания из папки
-    >>> kb = KnowledgeBase("data/knowledge.db")
+    >>> # Загрузить знания из папки (с разбиением на секции)
+    >>> kb = KnowledgeBase("data/knowledge.db", split_sections=True)
     >>> kb.ingest_folder("knowledge/patterns")
-    >>> kb.ingest_folder("knowledge/techniques")
+    >>> # Один файл "Полное руководство.pdf" → множество секций!
     >>>
     >>> # Использовать для генерации
     >>> generator = PatternGenerator(kb)
@@ -37,6 +42,13 @@ from .generator import (
     ProjectDescription,
 )
 
+from .splitter import (
+    DocumentSplitter,
+    DocumentSection,
+    SplitStrategy,
+    categorize_section,
+)
+
 __all__ = [
     # Base
     "KnowledgeBase",
@@ -46,4 +58,9 @@ __all__ = [
     "PatternGenerator",
     "ProjectRequirements",
     "ProjectDescription",
+    # Splitter
+    "DocumentSplitter",
+    "DocumentSection",
+    "SplitStrategy",
+    "categorize_section",
 ]

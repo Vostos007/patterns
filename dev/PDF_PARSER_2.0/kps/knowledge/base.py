@@ -38,6 +38,9 @@ except ImportError:
     NUMPY_AVAILABLE = False
     np = None
 
+# Import splitter for section-based ingestion
+from .splitter import DocumentSplitter, SplitStrategy, categorize_section
+
 
 logger = logging.getLogger(__name__)
 
@@ -112,16 +115,26 @@ class KnowledgeBase:
         ... )
     """
 
-    def __init__(self, db_path: str, use_embeddings: bool = True):
+    def __init__(
+        self,
+        db_path: str,
+        use_embeddings: bool = True,
+        split_sections: bool = True,
+        split_strategy: SplitStrategy = SplitStrategy.AUTO,
+    ):
         """
         Инициализация базы знаний.
 
         Args:
             db_path: Путь к SQLite базе
             use_embeddings: Использовать embeddings для поиска
+            split_sections: Разбивать документы на секции (рекомендуется!)
+            split_strategy: Стратегия разбиения (AUTO, MARKDOWN, CHAPTERS, etc.)
         """
         self.db_path = Path(db_path)
         self.use_embeddings = use_embeddings and NUMPY_AVAILABLE
+        self.split_sections = split_sections
+        self.split_strategy = split_strategy
 
         # Создать БД
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,7 +143,20 @@ class KnowledgeBase:
         # Кэш для embeddings
         self.embedding_cache = {}
 
-        logger.info(f"KnowledgeBase initialized: {db_path}")
+        # Document splitter для разбиения на секции
+        if self.split_sections:
+            self.splitter = DocumentSplitter(
+                min_section_length=100,
+                max_section_length=10000,
+                chunk_size=2000,
+            )
+        else:
+            self.splitter = None
+
+        logger.info(
+            f"KnowledgeBase initialized: {db_path} "
+            f"(split_sections={split_sections}, embeddings={self.use_embeddings})"
+        )
 
     def _init_database(self):
         """Создать структуру БД."""
@@ -222,17 +248,18 @@ class KnowledgeBase:
         count = 0
         for file_path in files:
             try:
-                # Загрузить файл
-                entry = self._load_file(file_path, category, language)
-                if entry:
-                    self.add_entry(entry)
-                    count += 1
+                # Загрузить файл (может вернуть несколько записей если split_sections=True)
+                entries = self._load_file(file_path, category, language)
+                if entries:
+                    for entry in entries:
+                        self.add_entry(entry)
+                        count += 1
 
             except Exception as e:
                 logger.error(f"Failed to load {file_path}: {e}")
                 continue
 
-        logger.info(f"Ingested {count} documents from {folder_path}")
+        logger.info(f"Ingested {count} sections from {folder_path}")
         return count
 
     def _load_file(
@@ -240,8 +267,17 @@ class KnowledgeBase:
         file_path: Path,
         category: Optional[KnowledgeCategory],
         language: Optional[str],
-    ) -> Optional[KnowledgeEntry]:
-        """Загрузить один файл."""
+    ) -> List[KnowledgeEntry]:
+        """
+        Загрузить один файл.
+
+        Если split_sections=True, разбивает документ на секции
+        и возвращает список записей (одна на секцию).
+        Иначе возвращает одну запись для всего файла.
+
+        Returns:
+            Список записей (может быть много из одного файла!)
+        """
 
         # Прочитать содержимое
         if file_path.suffix == ".json":
@@ -249,37 +285,83 @@ class KnowledgeBase:
                 data = json.load(f)
                 title = data.get("title", file_path.stem)
                 content = data.get("content", "")
-                metadata = data.get("metadata", {})
+                base_metadata = data.get("metadata", {})
         else:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
                 title = file_path.stem
-                metadata = {}
+                base_metadata = {}
 
         if not content.strip():
-            return None
-
-        # Определить категорию (если не указана)
-        if category is None:
-            category = self._detect_category(title, content, file_path)
+            return []
 
         # Определить язык (если не указан)
         if language is None:
             language = self._detect_language(content)
 
-        # Извлечь ключевые слова
-        keywords = self._extract_keywords(content)
+        # КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Разбить на секции если включено
+        if self.split_sections and self.splitter:
+            sections = self.splitter.split(
+                content, strategy=self.split_strategy, filename=str(file_path)
+            )
 
-        return KnowledgeEntry(
-            id=None,
-            category=category,
-            title=title,
-            content=content,
-            language=language,
-            source_file=str(file_path),
-            metadata=metadata,
-            keywords=keywords,
-        )
+            entries = []
+            for section in sections:
+                # Категория для каждой секции отдельно!
+                if category is None:
+                    section_category = categorize_section(section)
+                else:
+                    section_category = category
+
+                # Метаданные секции
+                section_metadata = {
+                    **base_metadata,
+                    "section_level": section.level,
+                    "section_start": section.start_pos,
+                    "section_end": section.end_pos,
+                    "parent_section": section.parent_title,
+                    "document_title": title,
+                }
+
+                # Извлечь ключевые слова из секции
+                section_keywords = self._extract_keywords(section.content)
+
+                entry = KnowledgeEntry(
+                    id=None,
+                    category=section_category,
+                    title=section.title,
+                    content=section.content,
+                    language=language,
+                    source_file=str(file_path),
+                    metadata=section_metadata,
+                    keywords=section_keywords,
+                )
+                entries.append(entry)
+
+            logger.info(
+                f"Split '{file_path.name}' into {len(entries)} sections "
+                f"({', '.join(set(e.category.value for e in entries))})"
+            )
+            return entries
+
+        else:
+            # Старое поведение: весь документ как одна запись
+            if category is None:
+                category = self._detect_category(title, content, file_path)
+
+            keywords = self._extract_keywords(content)
+
+            entry = KnowledgeEntry(
+                id=None,
+                category=category,
+                title=title,
+                content=content,
+                language=language,
+                source_file=str(file_path),
+                metadata=base_metadata,
+                keywords=keywords,
+            )
+            return [entry]
 
     def _detect_category(
         self, title: str, content: str, file_path: Path
