@@ -698,22 +698,38 @@ class UnifiedPipeline:
         fmt_lower = fmt.lower()
 
         if docling_document:
-            if fmt_lower == "docx":
-                reference_doc = self._resolve_docx_reference()
-                render_docx_from_docling(docling_document, output_file, reference_doc)
-                return
-            if fmt_lower == "pdf":
-                css_path = self._resolve_pdf_css()
-                render_pdf_from_docling(docling_document, output_file, css_path)
-                return
-            if fmt_lower in {"markdown", "md"}:
-                render_markdown_from_docling(docling_document, output_file)
-                return
-            if fmt_lower == "html":
-                render_html_from_docling(docling_document, output_file)
-                return
+            try:
+                if fmt_lower == "docx":
+                    reference_doc = self._resolve_docx_reference()
+                    render_docx_from_docling(docling_document, output_file, reference_doc)
+                    return
+                if fmt_lower == "pdf":
+                    css_path = self._resolve_pdf_css()
+                    render_pdf_from_docling(docling_document, output_file, css_path)
+                    return
+                if fmt_lower in {"markdown", "md"}:
+                    render_markdown_from_docling(docling_document, output_file)
+                    return
+                if fmt_lower == "html":
+                    render_html_from_docling(docling_document, output_file)
+                    return
+            except Exception as exc:
+                logger.warning(
+                    "Docling-based %s export failed, falling back to legacy path: %s",
+                    fmt,
+                    exc,
+                )
 
         if fmt_lower == "docx":
+            if docling_document is not None:
+                try:
+                    build_docx_from_structure(translated_doc, output_file)
+                    return
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.warning(
+                        "Structured DOCX export failed, falling back to template mutation: %s",
+                        exc,
+                    )
             if original_input.suffix.lower() == ".docx" and original_input.exists():
                 render_docx_inplace(
                     original_input,
