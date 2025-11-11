@@ -95,6 +95,12 @@ EXPORT_DURATION = Histogram(
     buckets=[0.5, 1, 2, 5, 10, 30],
 )
 
+EXPORTS_TOTAL = Counter(
+    "kps_exports_total",
+    "Total number of exports by format",
+    ["format"],  # docx, pdf, html, md
+)
+
 # Knowledge Base metrics
 KB_SEARCHES = Counter(
     "kps_kb_searches_total",
@@ -224,6 +230,11 @@ def record_translation_duration(target_lang: str, duration: float):
 def record_export_duration(format: str, duration: float):
     """Record export stage duration."""
     EXPORT_DURATION.labels(format=format).observe(duration)
+
+
+def record_export(format: str):
+    """Record successful export by format."""
+    EXPORTS_TOTAL.labels(format=format).inc()
 
 
 def record_kb_search(category: str, language: str):

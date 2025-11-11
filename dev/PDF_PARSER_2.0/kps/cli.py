@@ -222,6 +222,106 @@ def knowledge(
 
 
 @app.command()
+def export(
+    input_file: str = typer.Argument(..., help="Input document (PDF, DOCX, etc.)"),
+    md_out: str = typer.Option("build/doc.md", "--md", help="Markdown output path"),
+    html_out: str = typer.Option("build/doc.html", "--html", help="HTML output path"),
+    docx_out: str = typer.Option("output/final.docx", "--docx", help="DOCX output path"),
+    pdf_out: str = typer.Option("output/final.pdf", "--pdf", help="PDF output path"),
+    reference: str = typer.Option("configs/reference.docx", "--reference", "-r", help="Reference DOCX template"),
+    css: str = typer.Option("configs/pdf.css", "--css", "-c", help="PDF CSS file"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+):
+    """
+    Export document to DOCX and PDF formats.
+
+    Converts input document through Docling → Markdown → HTML → DOCX/PDF pipeline.
+
+    Example:
+        kps export document.pdf --docx output/doc.docx --pdf output/doc.pdf
+    """
+    import time
+    from kps.export import (
+        doc_to_markdown,
+        markdown_to_html,
+        render_docx,
+        render_pdf_via_html,
+    )
+    from kps.metrics import record_export, record_export_duration
+
+    # Setup logging
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+    try:
+        typer.echo("Starting export pipeline...")
+
+        # Step 1: Docling → Markdown
+        if verbose:
+            typer.echo(f"[1/4] Extracting to Markdown: {input_file} → {md_out}")
+        start = time.time()
+        doc_to_markdown(input_file, md_out)
+        duration = time.time() - start
+        record_export_duration("md", duration)
+        record_export("md")
+        if verbose:
+            typer.echo(f"      ✓ Complete ({duration:.2f}s)")
+
+        # Step 2: Markdown → HTML
+        if verbose:
+            typer.echo(f"[2/4] Converting to HTML: {md_out} → {html_out}")
+        start = time.time()
+        markdown_to_html(md_out, html_out)
+        duration = time.time() - start
+        record_export_duration("html", duration)
+        record_export("html")
+        if verbose:
+            typer.echo(f"      ✓ Complete ({duration:.2f}s)")
+
+        # Step 3: Markdown → DOCX
+        if verbose:
+            typer.echo(f"[3/4] Rendering DOCX: {md_out} → {docx_out}")
+        start = time.time()
+        render_docx(md_out, docx_out, reference)
+        duration = time.time() - start
+        record_export_duration("docx", duration)
+        record_export("docx")
+        if verbose:
+            typer.echo(f"      ✓ Complete ({duration:.2f}s)")
+
+        # Step 4: HTML → PDF
+        if verbose:
+            typer.echo(f"[4/4] Rendering PDF: {html_out} → {pdf_out}")
+        start = time.time()
+        render_pdf_via_html(html_out, css, pdf_out)
+        duration = time.time() - start
+        record_export_duration("pdf", duration)
+        record_export("pdf")
+        if verbose:
+            typer.echo(f"      ✓ Complete ({duration:.2f}s)")
+
+        # Success
+        typer.echo("\n" + "=" * 60)
+        typer.secho("✓ Export complete!", fg=typer.colors.GREEN, bold=True)
+        typer.echo("=" * 60)
+        typer.echo(f"DOCX: {docx_out}")
+        typer.echo(f"PDF:  {pdf_out}")
+        typer.echo(f"HTML: {html_out}")
+        typer.echo(f"MD:   {md_out}")
+
+    except Exception as e:
+        typer.secho(f"✗ Export failed: {e}", fg=typer.colors.RED, err=True)
+        if verbose:
+            import traceback
+
+            traceback.print_exc()
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def version():
     """Show version information."""
     typer.echo("KPS (Knitting Pattern System) v2.0.0")
