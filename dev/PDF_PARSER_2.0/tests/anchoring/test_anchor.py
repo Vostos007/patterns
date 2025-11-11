@@ -330,13 +330,28 @@ class TestAnchorAssetsToBlocks:
 
     def test_multi_column_anchoring(self):
         """Test anchoring with multi-column layout."""
-        # Create two-column layout
+        # Create two-column layout with multiple blocks per column
+        # (min 3 blocks per column for DBSCAN clustering)
         left_blocks = [
             ContentBlock(
                 block_id="p.left.001",
                 block_type=BlockType.PARAGRAPH,
                 content="Left column text",
                 bbox=BBox(50, 100, 200, 150),
+                page_number=0,
+            ),
+            ContentBlock(
+                block_id="p.left.002",
+                block_type=BlockType.PARAGRAPH,
+                content="Left column text 2",
+                bbox=BBox(50, 200, 200, 250),
+                page_number=0,
+            ),
+            ContentBlock(
+                block_id="p.left.003",
+                block_type=BlockType.PARAGRAPH,
+                content="Left column text 3",
+                bbox=BBox(50, 300, 200, 350),
                 page_number=0,
             ),
         ]
@@ -347,6 +362,20 @@ class TestAnchorAssetsToBlocks:
                 block_type=BlockType.PARAGRAPH,
                 content="Right column text",
                 bbox=BBox(300, 100, 450, 150),
+                page_number=0,
+            ),
+            ContentBlock(
+                block_id="p.right.002",
+                block_type=BlockType.PARAGRAPH,
+                content="Right column text 2",
+                bbox=BBox(300, 200, 450, 250),
+                page_number=0,
+            ),
+            ContentBlock(
+                block_id="p.right.003",
+                block_type=BlockType.PARAGRAPH,
+                content="Right column text 3",
+                bbox=BBox(300, 300, 450, 350),
                 page_number=0,
             ),
         ]
@@ -408,11 +437,12 @@ class TestAnchorAssetsToBlocks:
         assert report.success_rate == 1.0
 
         # Each asset should anchor to block in same column
+        # Assets at y=160-200 should anchor to nearest block above (p.*.002 at y=200-250)
         left_asset = anchored_ledger.find_by_id("img-left")
         right_asset = anchored_ledger.find_by_id("img-right")
 
-        assert left_asset.anchor_to == "p.left.001"
-        assert right_asset.anchor_to == "p.right.001"
+        assert left_asset.anchor_to == "p.left.002"
+        assert right_asset.anchor_to == "p.right.002"
 
 
 class TestValidateGeometryPreservation:

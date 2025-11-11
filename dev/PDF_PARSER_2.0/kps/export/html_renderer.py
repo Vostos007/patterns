@@ -52,7 +52,8 @@ def _render_block(block_type: BlockType, content: str) -> str:
         return "<table>" + "".join(table_rows) + "</table>"
     if block_type == BlockType.FIGURE:
         return f"<figure><figcaption>{safe}</figcaption></figure>"
-    return f"<p>{safe.replace('\n', '<br />')}</p>"
+    text_with_breaks = safe.replace('\n', '<br />')
+    return f"<p>{text_with_breaks}</p>"
 
 
 def render_pdf(html_content: str, css_path: Optional[Path], output_path: Path) -> Path:
