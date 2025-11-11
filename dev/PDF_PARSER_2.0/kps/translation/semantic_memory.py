@@ -227,6 +227,8 @@ class SemanticTranslationMemory:
         glossary_terms: List[str],
         quality_score: float = 1.0,
         context: str = "",
+        glossary_version: Optional[int] = None,
+        model: Optional[str] = None,
     ) -> None:
         """
         Добавить перевод в память.
@@ -239,8 +241,17 @@ class SemanticTranslationMemory:
             glossary_terms: Использованные термины
             quality_score: Оценка качества (0.0-1.0)
             context: Контекст использования
+            glossary_version: Версия глоссария (NEW - для правильного кэширования)
+            model: Название модели (NEW - для правильного кэширования)
         """
-        key = self._make_key(source_text, source_lang, target_lang)
+        # IMPROVED: Include glossary_version and model in cache key
+        key = self._make_key(
+            source_text,
+            source_lang,
+            target_lang,
+            glossary_version=glossary_version,
+            model=model,
+        )
 
         # Вычислить embedding
         embedding = None
@@ -303,7 +314,12 @@ class SemanticTranslationMemory:
         self.cache[key] = entry
 
     def get_translation(
-        self, source_text: str, source_lang: str, target_lang: str
+        self,
+        source_text: str,
+        source_lang: str,
+        target_lang: str,
+        glossary_version: Optional[int] = None,
+        model: Optional[str] = None,
     ) -> Optional[SemanticEntry]:
         """
         Получить точный перевод из кэша.
@@ -312,11 +328,20 @@ class SemanticTranslationMemory:
             source_text: Исходный текст
             source_lang: Исходный язык
             target_lang: Целевой язык
+            glossary_version: Версия глоссария (NEW)
+            model: Название модели (NEW)
 
         Returns:
             Запись или None
         """
-        key = self._make_key(source_text, source_lang, target_lang)
+        # IMPROVED: Include glossary_version and model in cache key
+        key = self._make_key(
+            source_text,
+            source_lang,
+            target_lang,
+            glossary_version=glossary_version,
+            model=model,
+        )
 
         # Сначала проверить in-memory кэш
         if key in self.cache:
@@ -565,11 +590,51 @@ class SemanticTranslationMemory:
             context=context or "",
         )
 
-    def _make_key(self, text: str, source_lang: str, target_lang: str) -> str:
-        """Создать ключ для хеша."""
+    def _make_key(
+        self,
+        text: str,
+        source_lang: str,
+        target_lang: str,
+        glossary_version: Optional[int] = None,
+        model: Optional[str] = None,
+    ) -> str:
+        """
+        Создать ключ для хеша кэша.
+
+        IMPROVED: Now includes glossary version and model to prevent cache
+        collisions when glossary or model changes.
+
+        Args:
+            text: Source text
+            source_lang: Source language
+            target_lang: Target language
+            glossary_version: Glossary version number (optional, defaults to 0)
+            model: Model name (optional, defaults to "unknown")
+
+        Returns:
+            SHA256 hash as hex string
+        """
         normalized = text.lower().strip()
-        key_string = f"{source_lang}:{target_lang}:{normalized}"
-        return hashlib.md5(key_string.encode()).hexdigest()
+
+        # Create versioned key payload
+        payload = {
+            "t": normalized,
+            "s": source_lang,
+            "tgt": target_lang,
+            "g": glossary_version or 0,
+            "m": model or "unknown",
+        }
+
+        # Use deterministic JSON serialization
+        key_string = json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(',', ':'),
+            sort_keys=True  # Ensure consistent ordering
+        )
+
+        # Use SHA256 (more secure than MD5)
+        return hashlib.sha256(key_string.encode("utf-8")).hexdigest()
 
     def get_statistics(self) -> Dict:
         """Получить статистику."""
