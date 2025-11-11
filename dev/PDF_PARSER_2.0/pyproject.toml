@@ -49,6 +49,11 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 addopts = "-v --cov=kps --cov-report=html --cov-report=term"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests"
+]
 
 [tool.mypy]
 python_version = "3.11"
