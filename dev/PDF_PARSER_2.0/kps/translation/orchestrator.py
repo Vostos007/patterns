@@ -14,9 +14,14 @@ Production Features:
 
 from __future__ import annotations
 
+import json
+import logging
 import math
+import os
+import re
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 try:  # pragma: no cover - optional dependency
@@ -27,14 +32,64 @@ except ImportError:  # pragma: no cover
     OpenAIError = Exception  # type: ignore
     RateLimitError = Exception  # type: ignore
 
+try:  # pragma: no cover - optional dependency
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    load_dotenv = None  # type: ignore
+
 from ..core.placeholders import decode_placeholders, encode_placeholders
 
 # Import term validator for glossary compliance
 try:
-    from .term_validator import TermValidator, Violation
+    from .term_validator import TermValidator, TermRule, Violation
 except ImportError:
     TermValidator = None  # type: ignore
+    TermRule = None  # type: ignore
     Violation = None  # type: ignore
+
+
+logger = logging.getLogger(__name__)
+
+
+def _candidate_env_paths() -> List[Path]:
+    paths: List[Path] = []
+
+    override = os.getenv("KPS_ENV_FILE")
+    if override:
+        paths.append(Path(override).expanduser())
+
+    module_path = Path(__file__).resolve()
+    for ancestor in module_path.parents:
+        candidate = ancestor / ".env"
+        if candidate not in paths:
+            paths.append(candidate)
+
+    cwd_candidate = Path.cwd() / ".env"
+    if cwd_candidate not in paths:
+        paths.append(cwd_candidate)
+
+    return paths
+
+
+_DOTENV_LOADED = False
+
+
+def _ensure_env_loaded() -> None:
+    global _DOTENV_LOADED
+    if _DOTENV_LOADED:
+        return
+
+    if os.getenv("OPENAI_API_KEY"):
+        _DOTENV_LOADED = True
+        return
+
+    if load_dotenv is not None:
+        for path in _candidate_env_paths():
+            if path.is_file():
+                load_dotenv(dotenv_path=path)
+                break
+
+    _DOTENV_LOADED = True
 
 
 @dataclass
@@ -105,7 +160,7 @@ class TranslationOrchestrator:
         self,
         model: str = "gpt-4o-mini",
         api_key: Optional[str] = None,
-        max_batch_size: Optional[int] = None,
+        max_batch_size: Optional[int] = 10,
         max_retries: int = 3,
         retry_delay: float = 1.0,
         term_validator: Optional["TermValidator"] = None,
@@ -130,8 +185,10 @@ class TranslationOrchestrator:
         self.term_validator = term_validator
         self.strict_glossary = strict_glossary
 
-        if openai is not None and api_key:
-            openai.api_key = api_key
+        _ensure_env_loaded()
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        if openai is not None and self.api_key:
+            openai.api_key = self.api_key
 
         # Token counting cache
         self._token_cache: Dict[str, int] = {}
@@ -147,6 +204,10 @@ class TranslationOrchestrator:
         if openai is None:
             raise RuntimeError(
                 "OpenAI client is not available. Install the openai package or provide a mock."
+            )
+        if not (getattr(openai, "api_key", None) or self.api_key):
+            raise RuntimeError(
+                "OpenAI API key is not configured. Set OPENAI_API_KEY in your environment or pass api_key to TranslationOrchestrator."
             )
 
     def detect_language(self, sample_text: str) -> str:
@@ -212,20 +273,49 @@ Language code:"""
             lang for lang in target_languages if lang.lower() != source_lang.lower()
         ]
 
-        # Translate to each target language
+        batches = self._split_into_batches(segments, self.max_batch_size)
         translations: Dict[str, TranslationResult] = {}
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_cost = 0.0
+
         for target_lang in target_languages:
-            result = self._translate_to_language(
-                segments=segments,
-                source_lang=source_lang,
-                target_lang=target_lang,
-                glossary_context=glossary_context,
+            translated_segments: List[str] = []
+
+            for batch in batches:
+                translated_batch, input_tokens, output_tokens = self._retry_with_backoff(
+                    lambda b=batch: self._translate_batch_with_tokens(
+                        segments=b,
+                        source_lang=source_lang,
+                        target_lang=target_lang,
+                        glossary_context=glossary_context,
+                    )
+                )
+
+                translated_segments.extend(translated_batch)
+                total_input_tokens += input_tokens
+                total_output_tokens += output_tokens
+                total_cost += self._calculate_cost(input_tokens, output_tokens, self.model)
+
+            if self.term_validator:
+                translated_segments = self._validate_and_enforce_terms(
+                    segments=segments,
+                    translated_segments=translated_segments,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                )
+
+            translations[target_lang] = TranslationResult(
+                target_language=target_lang,
+                segments=translated_segments,
             )
-            translations[target_lang] = result
 
         return BatchTranslationResult(
             detected_source_language=source_lang,
             translations=translations,
+            total_cost=total_cost,
+            total_input_tokens=total_input_tokens,
+            total_output_tokens=total_output_tokens,
         )
 
     def _translate_to_language(
@@ -293,7 +383,7 @@ Translated segments:"""
             translated_segments = [s.text for s in segments]
 
         # P2: Validate glossary compliance if term_validator is configured
-        if self.term_validator and self.strict_glossary:
+        if self.term_validator:
             translated_segments = self._validate_and_enforce_terms(
                 segments=segments,
                 translated_segments=translated_segments,
@@ -447,6 +537,14 @@ Critical rules:
                         estimated_time_remaining=estimated_remaining,
                     )
                     progress_callback(progress)
+
+            if self.term_validator:
+                all_translated_segments = self._validate_and_enforce_terms(
+                    segments=segments,
+                    translated_segments=all_translated_segments,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                )
 
             translations[target_lang] = TranslationResult(
                 target_language=target_lang,
@@ -749,52 +847,169 @@ Translated segments:"""
         if not self.term_validator:
             return translated_segments
 
-        import logging
-        logger = logging.getLogger(__name__)
-
-        corrected_segments = []
+        corrected_segments: List[str] = []
         total_violations = 0
 
         for idx, (src_seg, tgt_text) in enumerate(zip(segments, translated_segments)):
-            # Validate for violations
-            violations = self.term_validator.validate(
+            corrected_text = tgt_text
+            rules = self.term_validator.get_rules_for_context(
                 src_text=src_seg.text,
-                tgt_text=tgt_text,
                 src_lang=source_lang,
                 tgt_lang=target_lang,
             )
 
-            if violations:
-                total_violations += len(violations)
-                self.validation_metrics["violations_detected"] += len(violations)
-
-                # Log violations
-                logger.warning(
-                    f"Segment {idx}: Found {len(violations)} term violations"
+            if self._looks_like_source_language(corrected_text, source_lang):
+                structured = self._translate_with_structured_outputs(
+                    segment=src_seg,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                    rules=rules,
                 )
-                for v in violations:
-                    logger.warning(
-                        f"  - {v.type}: {v.rule.src} → {v.rule.tgt} | {v.suggestion}"
-                    )
+                if structured:
+                    corrected_text = structured
 
-                # Enforce terms
-                corrected = self.term_validator.enforce(
-                    tgt_text=tgt_text,
+            violations = self.term_validator.validate(
+                src_text=src_seg.text,
+                tgt_text=corrected_text,
+                src_lang=source_lang,
+                tgt_lang=target_lang,
+            )
+
+            if not violations:
+                corrected_segments.append(corrected_text)
+                continue
+
+            total_violations += len(violations)
+            self.validation_metrics["violations_detected"] += len(violations)
+
+            structured_translation = self._translate_with_structured_outputs(
+                segment=src_seg,
+                source_lang=source_lang,
+                target_lang=target_lang,
+                rules=rules,
+            ) if rules else None
+
+            if structured_translation:
+                self.validation_metrics["retries_for_terms"] += 1
+                corrected_text = structured_translation
+                violations = self.term_validator.validate(
+                    src_text=src_seg.text,
+                    tgt_text=corrected_text,
+                    src_lang=source_lang,
+                    tgt_lang=target_lang,
+                )
+
+            if violations:
+                corrected_text = self.term_validator.enforce(
+                    src_text=src_seg.text,
+                    tgt_text=corrected_text,
+                    src_lang=source_lang,
                     tgt_lang=target_lang,
                     fix_mode="replace",
                 )
-                corrected_segments.append(corrected)
                 self.validation_metrics["enforcements"] += 1
-            else:
-                corrected_segments.append(tgt_text)
+                remaining = self.term_validator.validate(
+                    src_text=src_seg.text,
+                    tgt_text=corrected_text,
+                    src_lang=source_lang,
+                    tgt_lang=target_lang,
+                )
+                if remaining and self.strict_glossary:
+                    details = ", ".join(
+                        f"{v.type}:{v.rule.src}->{v.rule.tgt}" for v in remaining
+                    )
+                    logger.error(
+                        "Glossary enforcement stuck for %s: %s | text=%s",
+                        src_seg.segment_id,
+                        details,
+                        corrected_text[:120],
+                    )
+                    raise ValueError(
+                        f"Glossary enforcement failed for segment {src_seg.segment_id}"
+                    )
 
-        if total_violations > 0:
+            corrected_segments.append(corrected_text)
+
+        if total_violations:
             logger.info(
-                f"Term validation: {total_violations} violations corrected across "
-                f"{len(segments)} segments"
+                "Term validation corrected %s violations for %s segments",
+                total_violations,
+                len(segments),
             )
 
         return corrected_segments
+
+    def _translate_with_structured_outputs(
+        self,
+        segment: TranslationSegment,
+        source_lang: str,
+        target_lang: str,
+        rules: List[TermRule],
+    ) -> Optional[str]:
+        """Retry translation using structured outputs to guarantee glossary terms."""
+
+        if openai is None:
+            return None
+
+        if self.term_validator and rules:
+            rules_text = self.term_validator.format_rules_for_prompt(rules)
+        else:
+            rules_text = (
+                f"Ensure the translation uses proper knitting terminology and stays in {target_lang}."
+            )
+
+        system_prompt = (
+            "You are a compliance-focused translator. "
+            "Return STRICT JSON with a 'translation' field that satisfies all glossary instructions."
+        )
+        payload = {
+            "source_language": source_lang,
+            "target_language": target_lang,
+            "source_text": segment.text,
+            "instructions": rules_text,
+        }
+
+        try:
+            response = openai.chat.completions.create(
+                model=self.model,
+                temperature=0.0,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "translation_response",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "translation": {"type": "string"}
+                            },
+                            "required": ["translation"],
+                            "additionalProperties": False,
+                        },
+                        "strict": True,
+                    },
+                },
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": json.dumps(payload, ensure_ascii=False),
+                    },
+                ],
+            )
+            content = response.choices[0].message.content
+            data = json.loads(content)
+            translation = data.get("translation") or data.get("text")
+            return translation.strip() if translation else None
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning("Structured translation retry failed: %s", exc)
+            return None
+
+    def _looks_like_source_language(self, text: str, source_lang: str) -> bool:
+        if not text:
+            return False
+        if source_lang.lower().startswith("ru"):
+            return bool(re.search(r"[а-яё]", text.lower()))
+        return False
 
 
 __all__ = [

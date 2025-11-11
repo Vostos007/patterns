@@ -5,12 +5,16 @@ Provides:
 - DOCX rendering with reference.docx styling
 - PDF rendering via HTML/CSS (WeasyPrint)
 - PDF rendering via LaTeX (optional, requires TeX)
+- Style contract loader shared by CLI and tests
 """
 
 import sys
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any, Dict, Iterable, Optional
+
+import yaml
 
 
 def _need(tool: str, hint: str):
@@ -19,7 +23,12 @@ def _need(tool: str, hint: str):
         sys.exit(f"{tool} не найден. {hint}")
 
 
-def render_docx(md_path: str, out_docx: str, reference_docx: str) -> None:
+def render_docx(
+    md_path: str,
+    out_docx: str,
+    reference_docx: str,
+    extra_args: Optional[Iterable[str]] = None,
+) -> None:
     """
     Render Markdown to DOCX using Pandoc with reference.docx styling.
 
@@ -40,19 +49,22 @@ def render_docx(md_path: str, out_docx: str, reference_docx: str) -> None:
     if not ref.exists():
         sys.exit(f"Нет reference.docx: {ref}")
     out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "pandoc",
-        str(md),
-        "--reference-doc=" + str(ref),
-        "--toc",
-        "--toc-depth=3",
-        "-o",
-        str(out),
-    ]
+    cmd = ["pandoc", str(md)]
+    default_args = ["--toc", "--toc-depth=3"]
+    if extra_args:
+        cmd.extend(extra_args)
+    else:
+        cmd.extend(default_args)
+    cmd.extend(["--reference-doc=" + str(ref), "-o", str(out)])
     subprocess.check_call(cmd)
 
 
-def render_pdf_via_html(html_path: str, css_path: str, out_pdf: str) -> None:
+def render_pdf_via_html(
+    html_path: str,
+    css_path: str,
+    out_pdf: str,
+    extra_args: Optional[Iterable[str]] = None,
+) -> None:
     """
     Render HTML to PDF using WeasyPrint with CSS Paged Media support.
 
@@ -73,7 +85,10 @@ def render_pdf_via_html(html_path: str, css_path: str, out_pdf: str) -> None:
     if not css.exists():
         sys.exit(f"Нет css: {css}")
     out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = ["weasyprint", str(html), str(out), "-s", str(css)]
+    cmd = ["weasyprint", str(html), str(out)]
+    if extra_args:
+        cmd.extend(extra_args)
+    cmd.extend(["-s", str(css)])
     subprocess.check_call(cmd)
 
 
@@ -102,6 +117,46 @@ def render_pdf_via_latex(md_path: str, out_pdf: str, engine: str = "tectonic") -
         )
     cmd = ["pandoc", str(md), "--pdf-engine=" + engine, "-o", str(out)]
     subprocess.check_call(cmd)
+
+
+def load_style_contract(style_map_path: str) -> Dict[str, Any]:
+    """Load YAML style map and attach its base directory."""
+
+    path = Path(style_map_path)
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    data["_base_dir"] = str(path.parent.resolve())
+    return data
+
+
+def _resolve_asset(base_dir: str, relative_path: str) -> Path:
+    candidate = Path(relative_path)
+    if candidate.is_absolute():
+        return candidate
+    return Path(base_dir) / candidate
+
+
+def render_docx_with_contract(
+    md_path: str,
+    out_docx: str,
+    contract: Dict[str, Any],
+) -> None:
+    docx_cfg = contract.get("docx", {})
+    base_dir = contract.get("_base_dir", ".")
+    reference_docx = _resolve_asset(base_dir, docx_cfg.get("reference_docx", "styles/reference.docx"))
+    pandoc_args = docx_cfg.get("pandoc_args") or docx_cfg.get("args")
+    render_docx(md_path, out_docx, str(reference_docx), pandoc_args)
+
+
+def render_pdf_with_contract(
+    html_path: str,
+    out_pdf: str,
+    contract: Dict[str, Any],
+) -> None:
+    pdf_cfg = contract.get("pdf", {})
+    base_dir = contract.get("_base_dir", ".")
+    css_path = _resolve_asset(base_dir, pdf_cfg.get("css", "styles/pdf.css"))
+    weasy_args = pdf_cfg.get("weasyprint_args")
+    render_pdf_via_html(html_path, str(css_path), out_pdf, weasy_args)
 
 
 if __name__ == "__main__":

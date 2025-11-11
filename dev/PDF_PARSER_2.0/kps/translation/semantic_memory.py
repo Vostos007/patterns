@@ -480,6 +480,150 @@ class SemanticTranslationMemory:
 
         return examples
 
+    # Compatibility helpers -------------------------------------------------
+    def get_few_shot_examples(
+        self,
+        source_lang: str,
+        target_lang: str,
+        limit: int = 5,
+        min_quality: float = 0.8,
+    ) -> List[Tuple[str, str]]:
+        """Return top translations for few-shot prompts.
+
+        Provides the same interface as ``TranslationMemory.get_few_shot_examples``
+        so higher-level translators can reuse semantic memory transparently.
+        """
+
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT source_text, translated_text, quality_score, usage_count
+            FROM translations
+            WHERE source_lang = ? AND target_lang = ? AND quality_score >= ?
+            ORDER BY quality_score DESC, usage_count DESC, timestamp DESC
+            LIMIT ?
+        """,
+            (source_lang, target_lang, min_quality, limit),
+        )
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [(row[0], row[1]) for row in rows]
+
+    def save(self) -> None:
+        """API compatibility shim (data is committed eagerly)."""
+
+        # SQLite writes happen eagerly on add_translation, so nothing to do.
+        return None
+
+    def suggest_glossary_term(
+        self,
+        source_text: str,
+        translated_text: str,
+        source_lang: str,
+        target_lang: str,
+        confidence: float = 0.5,
+        context: str = "",
+    ) -> None:
+        """Store candidate glossary term for later review."""
+
+        contexts: List[str] = []
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT contexts, frequency FROM term_suggestions
+            WHERE source_text=? AND source_lang=? AND target_lang=?
+        """,
+            (source_text, source_lang, target_lang),
+        )
+        row = cursor.fetchone()
+        if row:
+            stored_contexts = json.loads(row[0]) if row[0] else []
+            contexts = stored_contexts
+            frequency = row[1] + 1
+            if context:
+                contexts.append(context)
+                contexts = contexts[-5:]
+            cursor.execute(
+                """
+                UPDATE term_suggestions
+                SET translated_text=?, frequency=?, confidence=?, contexts=?
+                WHERE source_text=? AND source_lang=? AND target_lang=?
+            """,
+                (
+                    translated_text,
+                    frequency,
+                    confidence,
+                    json.dumps(contexts, ensure_ascii=False),
+                    source_text,
+                    source_lang,
+                    target_lang,
+                ),
+            )
+        else:
+            if context:
+                contexts.append(context)
+            cursor.execute(
+                """
+                INSERT INTO term_suggestions
+                (source_text, translated_text, source_lang, target_lang, frequency, confidence, contexts)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (
+                    source_text,
+                    translated_text,
+                    source_lang,
+                    target_lang,
+                    1,
+                    confidence,
+                    json.dumps(contexts, ensure_ascii=False),
+                ),
+            )
+
+        conn.commit()
+        conn.close()
+
+    def get_glossary_suggestions(
+        self,
+        min_frequency: int = 2,
+        min_confidence: float = 0.5,
+    ) -> List[Dict]:
+        """Return aggregated glossary suggestions."""
+
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT source_text, translated_text, source_lang, target_lang, frequency, confidence, contexts
+            FROM term_suggestions
+            WHERE frequency >= ? AND confidence >= ?
+            ORDER BY frequency DESC, confidence DESC
+        """,
+            (min_frequency, min_confidence),
+        )
+
+        suggestions = []
+        for row in cursor.fetchall():
+            contexts = json.loads(row[6]) if row[6] else []
+            suggestions.append(
+                {
+                    "source_text": row[0],
+                    "translated_text": row[1],
+                    "source_lang": row[2],
+                    "target_lang": row[3],
+                    "frequency": row[4],
+                    "confidence": row[5],
+                    "contexts": contexts,
+                }
+            )
+
+        conn.close()
+        return suggestions
+
     def _get_embedding(self, text: str, lang: str) -> Optional[np.ndarray]:
         """
         Получить embedding для текста.

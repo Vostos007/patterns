@@ -1,0 +1,11 @@
+version: 1
+
+docx:
+  reference_docx: "reference.docx"
+  pandoc_args:
+    - "--toc"
+    - "--toc-depth=3"
+
+pdf:
+  css: "pdf.css"
+  weasyprint_args: []

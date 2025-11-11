@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import re
+import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -26,6 +27,8 @@ from .orchestrator import (
     TranslationSegment,
 )
 from .translation_memory import TranslationMemory
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -99,6 +102,10 @@ class GlossaryTranslator:
         self.memory = memory
         self.enable_few_shot = enable_few_shot
         self.enable_auto_suggestions = enable_auto_suggestions
+
+        # If the orchestrator already has a term validator, force strict enforcement.
+        if getattr(self.orchestrator, "term_validator", None):
+            self.orchestrator.strict_glossary = True
 
     def translate(
         self,
@@ -213,6 +220,12 @@ class GlossaryTranslator:
         new_suggestions = 0
         if self.memory:
             for segment, translation in zip(segments_to_translate, new_translations):
+                if translation.strip() == segment.text.strip():
+                    logger.warning(
+                        "Skipping cache for %s because translation == source",
+                        segment.segment_id,
+                    )
+                    continue
                 # Найти термины для этого сегмента
                 segment_terms = self._find_terms(
                     segment.text, source_language, target_language

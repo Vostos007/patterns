@@ -295,7 +295,14 @@ class DoclingExtractor:
         self.current_section_type = SectionType.COVER
 
         # Iterate through document elements
-        for item in docling_doc.body:
+        body_root = getattr(docling_doc, "body", [])
+        if hasattr(body_root, "children"):
+            iterable = body_root.children
+        else:
+            iterable = body_root
+
+        for raw_item in iterable:
+            item = self._resolve_docling_item(docling_doc, raw_item)
             # Get item properties
             item_type = getattr(item, "obj_type", None)
             text = getattr(item, "text", "").strip()
@@ -321,7 +328,10 @@ class DoclingExtractor:
 
                 # Add heading as block
                 block = self._create_content_block(
-                    item, text, BlockType.HEADING, section_type
+                    item,
+                    text,
+                    BlockType.HEADING,
+                    section_type,
                 )
                 current_section.add_block(block)
 
@@ -339,7 +349,10 @@ class DoclingExtractor:
 
                 # Create block
                 block = self._create_content_block(
-                    item, text, block_type, self.current_section_type
+                    item,
+                    text,
+                    block_type,
+                    self.current_section_type,
                 )
                 current_section.add_block(block)
 
@@ -436,6 +449,35 @@ class DoclingExtractor:
             page_number=page_number,
             reading_order=reading_order,
         )
+
+    def _resolve_docling_item(self, docling_doc: DoclingDocument, item):
+        """Resolve Docling references (RefItem) to actual objects."""
+
+        # Docling 2.x emits RefItem placeholders that must be resolved against the
+        # owning document via the RefItem.resolve() helper. Older releases exposed
+        # DoclingDocument.resolve_ref(). Support both so we can handle either
+        # representation without depending on a specific docling build.
+        if hasattr(item, "resolve"):
+            try:
+                resolved = item.resolve(docling_doc)
+                if resolved is not None:
+                    return resolved
+            except Exception as exc:  # pragma: no cover - debugging only
+                logger.debug(
+                    f"Failed to resolve reference via item.resolve for {item}: {exc}"
+                )
+
+        if hasattr(item, "cref") and hasattr(docling_doc, "resolve_ref"):
+            try:
+                resolved = docling_doc.resolve_ref(item)
+                if resolved is not None:
+                    return resolved
+            except Exception as exc:  # pragma: no cover - debugging only
+                logger.debug(
+                    f"Failed to resolve reference via doc.resolve_ref for {item}: {exc}"
+                )
+
+        return item
 
     def _extract_bbox(self, docling_item) -> Optional[BBox]:
         """

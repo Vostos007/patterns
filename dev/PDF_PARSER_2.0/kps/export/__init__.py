@@ -9,15 +9,21 @@ Provides:
 
 from .docling_to_markdown import doc_to_markdown, markdown_to_html
 from .pandoc_renderer import (
+    load_style_contract,
     render_docx,
+    render_docx_with_contract,
     render_pdf_via_html,
+    render_pdf_with_contract,
     render_pdf_via_latex,
 )
 
 __all__ = [
     "doc_to_markdown",
     "markdown_to_html",
+    "load_style_contract",
     "render_docx",
+    "render_docx_with_contract",
     "render_pdf_via_html",
+    "render_pdf_with_contract",
     "render_pdf_via_latex",
 ]

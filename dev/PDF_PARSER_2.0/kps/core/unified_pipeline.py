@@ -56,10 +56,15 @@ except ImportError:
 # QA
 try:
     from kps.qa.pipeline import QAPipeline
+    from kps.qa.translation_qa import TranslationQAGate
 
     QA_AVAILABLE = True
+    TRANSLATION_QA_AVAILABLE = True
 except ImportError:
     QA_AVAILABLE = False
+    TRANSLATION_QA_AVAILABLE = False
+
+from kps.translation.term_validator import TermRule, TermValidator
 
 
 logger = logging.getLogger(__name__)
@@ -195,9 +200,6 @@ class UnifiedPipeline:
 
     def _init_translation(self):
         """Инициализация системы перевода."""
-        # Orchestrator
-        self.orchestrator = TranslationOrchestrator()
-
         # Glossary
         self.glossary = GlossaryManager()
         if self.config.glossary_path:
@@ -205,6 +207,15 @@ class UnifiedPipeline:
             if glossary_file.exists():
                 self.glossary.load_from_yaml(str(glossary_file))
                 logger.info(f"Loaded {len(self.glossary.get_all_entries())} glossary terms")
+
+        # Term validator from glossary entries
+        self.term_validator = self._build_term_validator()
+
+        # Orchestrator
+        self.orchestrator = TranslationOrchestrator(
+            term_validator=self.term_validator,
+            strict_glossary=bool(self.term_validator),
+        )
 
         # Memory
         self.memory = None
@@ -250,7 +261,61 @@ class UnifiedPipeline:
             self.translator.knowledge_base = self.knowledge_base
             logger.info("Knowledge Base connected to translator (RAG enabled)")
 
+        # Translation QA gate (fail-closed)
+        self.translation_qa_gate = None
+        if self.term_validator and TRANSLATION_QA_AVAILABLE:
+            self.translation_qa_gate = TranslationQAGate(self.term_validator)
+
         logger.debug("Translation system initialized")
+
+    def _build_term_validator(self) -> Optional[TermValidator]:
+        """Build TermValidator rules from glossary entries."""
+
+        entries = self.glossary.get_all_entries() if hasattr(self, "glossary") else []
+        rules: List[TermRule] = []
+
+        rule_lookup: Dict[Tuple[str, str], TermRule] = {}
+
+        for entry in entries:
+            src_text = (entry.ru or "").strip()
+            if not src_text:
+                continue
+
+            for tgt_lang in ("en", "fr"):
+                tgt_text = getattr(entry, tgt_lang, "") or ""
+                tgt_text = tgt_text.strip()
+                if tgt_text:
+                    key = (src_text, tgt_lang)
+                    if key in rule_lookup:
+                        existing = rule_lookup[key]
+                        if tgt_text not in existing.aliases and tgt_text != existing.tgt:
+                            existing.aliases.append(tgt_text)
+                    else:
+                        rule = TermRule(
+                            src_lang="ru",
+                            tgt_lang=tgt_lang,
+                            src=src_text,
+                            tgt=tgt_text,
+                            do_not_translate=False,
+                        )
+                        rules.append(rule)
+                        rule_lookup[key] = rule
+
+            for token in entry.protected_tokens:
+                token = (token or "").strip()
+                if token:
+                    for tgt_lang in ("en", "fr"):
+                        rules.append(
+                            TermRule(
+                                src_lang="ru",
+                                tgt_lang=tgt_lang,
+                                src=token,
+                                tgt=token,
+                                do_not_translate=True,
+                            )
+                        )
+
+        return TermValidator(rules) if rules else None
 
     def _init_qa(self):
         """Инициализация QA системы."""
@@ -369,6 +434,36 @@ class UnifiedPipeline:
         # FIXED: Add zero division protection
         total_operations = total_segments * len(target_languages)
         cache_hit_rate = cache_hits / total_operations if total_operations > 0 else 0.0
+
+        # Translation QA gate
+        if self.translation_qa_gate:
+            logger.info("Step 3b: Translation QA gate...")
+            gated_translations = {}
+            for target_lang, translated_segments in translations.items():
+                batch = [
+                    {
+                        "id": segment.segment_id,
+                        "src": segment.text,
+                        "tgt": translated_segments[i],
+                        "src_lang": source_language,
+                        "tgt_lang": target_lang,
+                    }
+                    for i, segment in enumerate(segments)
+                ]
+
+                qa_result = self.translation_qa_gate.check_batch(batch)
+                if not qa_result.passed:
+                    sample = qa_result.findings[:3]
+                    summary = ", ".join(f"{f.kind}:{f.segment_id}" for f in sample)
+                    errors.append(
+                        f"Translation QA failed for {target_lang} (pass_rate={qa_result.pass_rate:.2f}): {summary}"
+                    )
+                    logger.error("Translation QA failed for %s: %s", target_lang, summary)
+                    continue
+
+                gated_translations[target_lang] = translated_segments
+
+            translations = gated_translations
 
         # STEP 4: QA (опционально)
         if self.config.enable_qa and self.qa_pipeline:

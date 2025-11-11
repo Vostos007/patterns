@@ -8,14 +8,14 @@ from xml.etree import ElementTree as ET
 from typing import Dict, List, Optional
 import logging
 
+from .tbx_validator import validate_tbx_file
+
 logger = logging.getLogger(__name__)
 
-# TBX namespace (may or may not be present in files)
 NS = {"tbx": "urn:iso:std:iso:30042:ed-2"}
 
 
 def _text(node) -> str:
-    """Extract text from XML node."""
     return (node.text or "").strip()
 
 
@@ -53,42 +53,39 @@ def import_tbx_to_db(
         ... )
         >>> print(f"Imported {n} terms")
     """
+    validation = validate_tbx_file(path_tbx)
+    if not validation.is_valid:
+        summary = "; ".join(issue.message for issue in validation.issues if issue.level == "error")
+        raise RuntimeError(f"TBX validation failed: {summary or 'see issues'}")
+
     try:
         import psycopg2
         import psycopg2.extras
-    except ImportError:
-        raise RuntimeError("psycopg2 not installed. Install with: pip install psycopg2-binary")
+    except ImportError as exc:
+        raise RuntimeError("psycopg2 not installed. Install with: pip install psycopg2-binary") from exc
 
     default_flags = default_flags or {}
-    tree = ET.parse(path_tbx)
-    root = tree.getroot()
-
-    def find_all_term_entry():
-        """Find termEntry elements (with or without namespace)."""
-        items = root.findall(".//tbx:termEntry", NS)
-        if not items:
-            items = root.findall(".//termEntry")
-        return items
-
     conn = psycopg2.connect(db_url)
     conn.autocommit = True
     cur = conn.cursor()
     inserted = 0
 
-    for te in find_all_term_entry():
-        # Collect terms by language
+    tree = ET.parse(path_tbx)
+    root = tree.getroot()
+
+    term_entries = root.findall(".//tbx:termEntry", NS) or root.findall(".//termEntry")
+
+    for te in term_entries:
         lang_terms: Dict[str, List[str]] = {}
 
-        # Support both namespaced and non-namespaced elements
         langsets = te.findall("tbx:langSet", NS) or te.findall("langSet")
 
         for ls in langsets:
-            # Extract language code (may use xml:lang attribute)
             lcode = ls.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", "").lower()
             if not lcode:
                 continue
 
-            terms = []
+            terms: List[str] = []
             tigs = ls.findall(".//tbx:tig", NS) or ls.findall(".//tig")
             for tig in tigs:
                 term = tig.find("tbx:term", NS) or tig.find("term")
@@ -100,7 +97,6 @@ def import_tbx_to_db(
             if terms:
                 lang_terms[lcode] = terms
 
-        # Map src → tgt
         src_list = lang_terms.get(src_lang.lower(), [])
         tgt_list = lang_terms.get(tgt_lang.lower(), [])
 

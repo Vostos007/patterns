@@ -228,8 +228,7 @@ def export(
     html_out: str = typer.Option("build/doc.html", "--html", help="HTML output path"),
     docx_out: str = typer.Option("output/final.docx", "--docx", help="DOCX output path"),
     pdf_out: str = typer.Option("output/final.pdf", "--pdf", help="PDF output path"),
-    reference: str = typer.Option("configs/reference.docx", "--reference", "-r", help="Reference DOCX template"),
-    css: str = typer.Option("configs/pdf.css", "--css", "-c", help="PDF CSS file"),
+    style_map: str = typer.Option("styles/style_map.yml", "--style-map", help="Path to style_map.yml"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
     """
@@ -244,8 +243,9 @@ def export(
     from kps.export import (
         doc_to_markdown,
         markdown_to_html,
-        render_docx,
-        render_pdf_via_html,
+        load_style_contract,
+        render_docx_with_contract,
+        render_pdf_with_contract,
     )
     from kps.metrics import record_export, record_export_duration
 
@@ -257,6 +257,7 @@ def export(
     )
 
     try:
+        contract = load_style_contract(style_map)
         typer.echo("Starting export pipeline...")
 
         # Step 1: Docling → Markdown
@@ -285,7 +286,7 @@ def export(
         if verbose:
             typer.echo(f"[3/4] Rendering DOCX: {md_out} → {docx_out}")
         start = time.time()
-        render_docx(md_out, docx_out, reference)
+        render_docx_with_contract(md_out, docx_out, contract)
         duration = time.time() - start
         record_export_duration("docx", duration)
         record_export("docx")
@@ -296,7 +297,7 @@ def export(
         if verbose:
             typer.echo(f"[4/4] Rendering PDF: {html_out} → {pdf_out}")
         start = time.time()
-        render_pdf_via_html(html_out, css, pdf_out)
+        render_pdf_with_contract(html_out, pdf_out, contract)
         duration = time.time() - start
         record_export_duration("pdf", duration)
         record_export("pdf")

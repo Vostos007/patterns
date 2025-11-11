@@ -129,6 +129,8 @@ class TermValidator:
         tgt_lower = tgt_text.lower()
 
         for rule in applicable_rules:
+            if len(rule.tgt) <= 2:
+                continue
             # Check if source term is present
             src_pattern = re.compile(
                 r'\b' + re.escape(rule.src.lower()) + r'\b',
@@ -151,21 +153,12 @@ class TermValidator:
                 continue
 
             # Check term_missing violation
-            tgt_pattern = re.compile(
-                r'\b' + re.escape(rule.tgt.lower()) + r'\b',
-                re.IGNORECASE
-            )
-
-            found = tgt_pattern.search(tgt_lower)
+            found = self._contains_term(tgt_lower, rule.tgt)
 
             # Also check aliases
             if not found and rule.aliases:
                 for alias in rule.aliases:
-                    alias_pattern = re.compile(
-                        r'\b' + re.escape(alias.lower()) + r'\b',
-                        re.IGNORECASE
-                    )
-                    if alias_pattern.search(tgt_lower):
+                    if self._contains_term(tgt_lower, alias):
                         found = True
                         break
 
@@ -192,7 +185,9 @@ class TermValidator:
 
     def enforce(
         self,
+        src_text: str,
         tgt_text: str,
+        src_lang: str,
         tgt_lang: str,
         fix_mode: str = "replace",
     ) -> str:
@@ -212,31 +207,74 @@ class TermValidator:
         """
         corrected = tgt_text
 
-        # Get all rules for this target language
-        applicable_rules = [
-            rule for lang_key, rules in self.rules_by_lang.items()
-            if lang_key[1] == tgt_lang
-            for rule in rules
-        ]
+        applicable_rules = self.get_rules_for_context(
+            src_text=src_text, src_lang=src_lang, tgt_lang=tgt_lang
+        )
 
         if not applicable_rules:
             return corrected
 
+        def has_variant(text: str, variants: List[str]) -> bool:
+            lower = text.lower()
+            return any(v.lower() in lower for v in variants if v)
+
         for rule in applicable_rules:
+            variants = [rule.tgt] + list(rule.aliases or [])
+
             if rule.do_not_translate:
-                # Protected terms should already be correct
-                # But ensure they're present
+                if rule.src not in corrected:
+                    # Replace any translated variant with the protected token
+                    replaced = False
+                    for variant in variants:
+                        if variant and variant in corrected:
+                            corrected = corrected.replace(variant, rule.src)
+                            replaced = True
+                            break
+                    if not replaced:
+                        corrected = corrected.rstrip() + (" " if corrected else "") + rule.src
                 continue
 
-            # This is simplistic - for production, you'd want more sophisticated
-            # pattern matching that handles morphological variants
-            # For now, we just ensure the canonical term is present
+            if not has_variant(corrected, variants):
+                if rule.src in corrected:
+                    corrected = corrected.replace(rule.src, rule.tgt)
+                else:
+                    corrected = corrected.rstrip() + (" " if corrected else "") + rule.tgt
 
-            # Note: Real enforcement would need linguistic analysis
-            # This is a placeholder for the concept
-            pass
+            if rule.enforce_case and rule.tgt:
+                corrected = self._force_case(corrected, rule.tgt)
 
         return corrected
+
+    def _contains_term(self, text_lower: str, term: str) -> bool:
+        if not term:
+            return False
+        pattern = self._build_term_pattern(term)
+        return bool(pattern.search(text_lower))
+
+    def _build_term_pattern(self, term: str) -> re.Pattern:
+        """Create regex allowing simple plural/possessive variants."""
+        suffix = ""
+        if term and term.replace(" ", "").isalpha():
+            suffix = r"(?:'s|s)?"
+        return re.compile(r"\b" + re.escape(term.lower()) + suffix + r"\b", re.IGNORECASE)
+
+    def _force_case(self, text: str, needle: str) -> str:
+        """Ensure the canonical term uses the expected casing."""
+        lowered = text.lower()
+        target = needle.lower()
+        start = 0
+        while True:
+            idx = lowered.find(target, start)
+            if idx == -1:
+                break
+            actual = text[idx : idx + len(needle)]
+            if actual != needle:
+                text = text[:idx] + needle + text[idx + len(needle) :]
+                lowered = text.lower()
+                start = idx + len(needle)
+            else:
+                start = idx + len(needle)
+        return text
 
     def get_rules_for_context(
         self,
