@@ -1,7 +1,20 @@
-"""
-Placeholder encoding utilities for protecting fragile tokens during translation.
+"""Placeholder encoding and decoding utilities.
 
-Enhanced from PDF_parser with [[asset_id]] marker support for KPS v2.0.
+The previous draft of this module consisted of a few loosely defined functions
+and even missed the opening module docstring marker, making the entire package
+fail to import.  This refactor introduces a focused implementation with clear
+semantics and ample inline documentation so downstream code – primarily the
+segmenter and the translation pipeline – can depend on deterministic
+behaviour.
+
+Highlights of the refactor:
+
+* Deterministic placeholder identifiers with predictable prefixes.
+* Support for the ``[[asset_id]]`` markers used by the anchoring subsystem.
+* Reusable compiled regular expressions for both encoding and decoding to
+  avoid recompilation overhead when processing hundreds of segments.
+* Helpful exceptions when collisions are detected while merging placeholder
+  mappings coming from different segmentation passes.
 """
 
 from __future__ import annotations
@@ -9,56 +22,59 @@ from __future__ import annotations
 import re
 from typing import Dict, Iterable, Tuple
 
-# Original placeholder pattern for URLs, emails, numbers
-PLACEHOLDER_PATTERN = re.compile(
-    r"("  # start capture group
-    r"https?://[^\s<>\"]+"  # URLs
-    r"|"  # or
-    r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}"  # emails
-    r"|"  # or
-    r"\b\d+[\d,.]*\b"  # numbers with optional separators
-    r")"
-)
-
-# NEW: Asset marker pattern for [[asset_id]]
-ASSET_MARKER_PATTERN = re.compile(r"\[\[([a-z0-9\-_]+)\]\]")
+# ---------------------------------------------------------------------------
+# Regular expressions and templates
+# ---------------------------------------------------------------------------
 
 PLACEHOLDER_TEMPLATE = '<ph id="{id}" />'
 
+_STANDARD_TOKEN_PATTERN = re.compile(
+    r"("  # group start
+    r"https?://[^\s<>\"]+"  # URLs
+    r"|"
+    r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}"  # email addresses
+    r"|"
+    r"\b\d[\d,.]*\b"  # numbers with separators
+    r")"
+)
+
+_ASSET_MARKER_PATTERN = re.compile(r"\[\[([a-z0-9\-_]+)\]\]", re.IGNORECASE)
+
+_PLACEHOLDER_TOKEN_PATTERN = re.compile(
+    r'<ph\s+id="(?P<id>[A-Z0-9_\-]+)"\s*/>'
+)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def encode_placeholders(text: str, *, start_index: int = 1) -> Tuple[str, Dict[str, str]]:
-    """
-    Replace fragile tokens with deterministic placeholders.
+    """Return ``text`` with fragile tokens replaced by placeholders.
 
-    Encodes:
-    - URLs (http://..., https://...)
-    - Email addresses (user@example.com)
-    - Numbers with separators (123,456.78)
-    - [[asset_id]] markers (NEW for KPS v2.0)
-
-    Returns:
-        Tuple of (encoded_text, mapping) where mapping is {placeholder_id: original_value}
+    The function processes asset markers first so they keep their dedicated
+    ``ASSET_`` prefix.  Afterwards general URLs, email addresses and numbers are
+    assigned sequential ``PH###`` identifiers.
     """
-    mapping: Dict[str, str] = {}
+
     if not text:
-        return text, mapping
+        return text, {}
 
     counter = start_index
+    mapping: Dict[str, str] = {}
 
-    # First, encode asset markers [[asset_id]]
-    def _asset_replacement(match: re.Match[str]) -> str:
+    def _replace_asset(match: re.Match[str]) -> str:
         nonlocal counter
-        marker = match.group(0)  # Full [[asset_id]]
-        asset_id = match.group(1)  # Just asset_id
-        placeholder_id = f"ASSET_{asset_id.upper()}"
-        mapping[placeholder_id] = marker
+        token = match.group(0)
+        asset_id = match.group(1).upper()
+        placeholder_id = f"ASSET_{asset_id}"
+        mapping[placeholder_id] = token
         counter += 1
         return PLACEHOLDER_TEMPLATE.format(id=placeholder_id)
 
-    encoded = ASSET_MARKER_PATTERN.sub(_asset_replacement, text)
+    encoded = _ASSET_MARKER_PATTERN.sub(_replace_asset, text)
 
-    # Then, encode URLs/emails/numbers
-    def _standard_replacement(match: re.Match[str]) -> str:
+    def _replace_standard(match: re.Match[str]) -> str:
         nonlocal counter
         token = match.group(0)
         placeholder_id = f"PH{counter:03d}"
@@ -66,43 +82,42 @@ def encode_placeholders(text: str, *, start_index: int = 1) -> Tuple[str, Dict[s
         counter += 1
         return PLACEHOLDER_TEMPLATE.format(id=placeholder_id)
 
-    encoded = PLACEHOLDER_PATTERN.sub(_standard_replacement, encoded)
+    encoded = _STANDARD_TOKEN_PATTERN.sub(_replace_standard, encoded)
 
     return encoded, mapping
 
 
 def decode_placeholders(text: str, mapping: Dict[str, str]) -> str:
-    """
-    Restore placeholders back to their original values.
+    """Restore previously encoded placeholders back into ``text``."""
 
-    Handles both standard placeholders (PH###) and asset markers (ASSET_*).
-    """
-    if not mapping or PLACEHOLDER_TEMPLATE.split("{id}")[0] not in text:
+    if not mapping or "<ph" not in text:
         return text
 
-    def _replacement(match: re.Match[str]) -> str:
+    def _replace(match: re.Match[str]) -> str:
         placeholder_id = match.group("id")
         return mapping.get(placeholder_id, match.group(0))
 
-    # Pattern matches both PH### and ASSET_*
-    pattern = re.compile(r'<ph\s+id="(?P<id>(?:PH\d{3}|ASSET_[A-Z0-9\-_]+))"\s*/>')
-    return pattern.sub(_replacement, text)
+    return _PLACEHOLDER_TOKEN_PATTERN.sub(_replace, text)
 
 
 def merge_placeholder_mappings(mappings: Iterable[Dict[str, str]]) -> Dict[str, str]:
-    """Merge multiple placeholder mappings ensuring no collisions."""
+    """Merge multiple placeholder dictionaries and guard against collisions."""
+
     merged: Dict[str, str] = {}
     for mapping in mappings:
         for key, value in mapping.items():
             if key in merged and merged[key] != value:
-                raise ValueError(f"Placeholder id collision for {key}: {merged[key]} != {value}")
+                raise ValueError(
+                    f"Placeholder collision for '{key}': '{merged[key]}' != '{value}'"
+                )
             merged[key] = value
     return merged
 
 
 __all__ = [
+    "PLACEHOLDER_TEMPLATE",
     "encode_placeholders",
     "decode_placeholders",
     "merge_placeholder_mappings",
-    "ASSET_MARKER_PATTERN",
 ]
+

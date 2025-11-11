@@ -16,19 +16,17 @@ from .document import (
     SectionType,
 )
 
-# Unified Pipeline
-try:
-    from .unified_pipeline import (
-        ExtractionMethod,
-        MemoryType,
-        PipelineConfig,
-        PipelineResult,
-        UnifiedPipeline,
-    )
+# Unified Pipeline (lazy import to avoid heavy dependencies during simple data-model usage)
+def __getattr__(name):  # type: ignore[override]
+    if name in {"UnifiedPipeline", "PipelineConfig", "PipelineResult", "ExtractionMethod", "MemoryType"}:
+        from . import unified_pipeline
 
-    PIPELINE_AVAILABLE = True
-except ImportError:
-    PIPELINE_AVAILABLE = False
+        return getattr(unified_pipeline, name)
+    raise AttributeError(name)
+
+
+def __dir__():  # pragma: no cover - thin wrapper
+    return sorted(set(globals()) | {"UnifiedPipeline", "PipelineConfig", "PipelineResult", "ExtractionMethod", "MemoryType"})
 
 __all__ = [
     # Assets
@@ -49,14 +47,12 @@ __all__ = [
     "SectionType",
 ]
 
-# Add pipeline if available
-if PIPELINE_AVAILABLE:
-    __all__.extend(
-        [
-            "UnifiedPipeline",
-            "PipelineConfig",
-            "PipelineResult",
-            "ExtractionMethod",
-            "MemoryType",
-        ]
-    )
+__all__.extend(
+    [
+        "UnifiedPipeline",
+        "PipelineConfig",
+        "PipelineResult",
+        "ExtractionMethod",
+        "MemoryType",
+    ]
+)

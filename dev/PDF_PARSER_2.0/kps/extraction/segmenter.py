@@ -1,295 +1,117 @@
-"""
-Text segmentation with placeholder encoding for KPS v2.0.
-
-Prepares ContentBlocks for translation by:
-1. Creating one segment per ContentBlock (no splitting)
-2. Encoding fragile tokens (URLs, emails, numbers, [[asset_id]])
-3. Preserving all newlines (critical for layout)
-4. Generating unique segment IDs for tracking
-"""
+"""Segmentation utilities converting a :class:`KPSDocument` into segments."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Iterable, List
 
-from ..core.document import ContentBlock, KPSDocument
-from ..core.placeholders import encode_placeholders, decode_placeholders
-from ..translation.orchestrator import TranslationSegment
+from kps.core.document import ContentBlock, KPSDocument
+from kps.core.placeholders import decode_placeholders, encode_placeholders
+from kps.translation.orchestrator import TranslationSegment as _TranslationSegment
+
+TranslationSegment = _TranslationSegment
+
+logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class SegmenterConfig:
-    """Configuration for text segmentation."""
-
-    max_segment_length: int = 8000  # API token limit safety margin
-    preserve_newlines: bool = True  # Always preserve (critical for layout)
-    placeholder_start_index: int = 1  # Starting index for placeholders
+    max_segment_length: int = 8_000
+    preserve_newlines: bool = True
+    placeholder_start_index: int = 1
 
 
 class Segmenter:
-    """
-    Text segmenter with placeholder encoding for translation.
+    """Convert structured content blocks into translation segments."""
 
-    Strategy: One segment per ContentBlock (no splitting within blocks).
-    This preserves document structure and simplifies reconstruction.
-
-    Encoding handles:
-    - URLs (http://, https://)
-    - Email addresses (user@example.com)
-    - Numbers with separators (123,456.78)
-    - [[asset_id]] markers (NEW in KPS v2.0)
-    """
-
-    def __init__(self, config: SegmenterConfig | None = None):
-        """
-        Initialize segmenter.
-
-        Args:
-            config: Optional configuration. Uses defaults if None.
-        """
+    def __init__(self, config: SegmenterConfig | None = None) -> None:
         self.config = config or SegmenterConfig()
 
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
     def segment_document(self, document: KPSDocument) -> List[TranslationSegment]:
-        """
-        Segment document into translation-ready segments.
-
-        Each ContentBlock becomes one segment with encoded placeholders.
-
-        Args:
-            document: KPSDocument with ContentBlocks (after marker injection)
-
-        Returns:
-            List of TranslationSegment objects with encoded placeholders
-        """
         segments: List[TranslationSegment] = []
-        segment_counter = 0
-
-        for section in document.sections:
-            for block in section.blocks:
-                # Create segment from block
-                segment = self._segment_block(block, segment_counter)
-                segments.append(segment)
-                segment_counter += 1
-
-        # Validate
-        self._validate_segments(segments, document)
-
+        for index, block in enumerate(document.iter_blocks()):
+            segment = self._segment_block(block, index)
+            segments.append(segment)
+        self._validate_segments(document, segments)
         return segments
 
-    def _segment_block(
-        self, block: ContentBlock, segment_index: int
-    ) -> TranslationSegment:
-        """
-        Create a translation segment from a single ContentBlock.
+    def segment(self, document: KPSDocument) -> List[TranslationSegment]:
+        """Backward compatible alias used by legacy tests."""
 
-        Segment ID format: {block_id}.seg{index}
-        Example: "p.materials.001.seg0"
+        return self.segment_document(document)
 
-        Args:
-            block: ContentBlock to segment
-            segment_index: Global segment index for unique ID
+    def merge_segments(self, translated_segments: Iterable[str], original: KPSDocument) -> KPSDocument:
+        translated_list = list(translated_segments)
+        expected = sum(1 for _ in original.iter_blocks())
+        if not translated_list:
+            raise ValueError("Translated segment list is empty")
+        if len(translated_list) != expected:
+            raise ValueError(f"Segment count mismatch: expected {expected}, received {len(translated_list)}")
 
-        Returns:
-            TranslationSegment with encoded text and placeholders
-        """
-        # Generate segment ID
-        segment_id = f"{block.block_id}.seg{segment_index}"
-
-        # Encode text with placeholders
-        encoded_text, placeholders = self._encode_block_text(block.content)
-
-        # Validate length
-        if len(encoded_text) > self.config.max_segment_length:
-            # Log warning but don't fail (API can handle slightly over)
-            print(
-                f"Warning: Segment {segment_id} length {len(encoded_text)} "
-                f"exceeds max {self.config.max_segment_length}"
-            )
-
-        return TranslationSegment(
-            segment_id=segment_id, text=encoded_text, placeholders=placeholders
-        )
-
-    def _encode_block_text(self, text: str) -> Tuple[str, Dict[str, str]]:
-        """
-        Encode fragile tokens in text as placeholders.
-
-        Wrapper around core.placeholders.encode_placeholders() with
-        segmentation-specific logic.
-
-        Encodes:
-        - URLs (http://, https://...)
-        - Email addresses (user@example.com)
-        - Numbers with separators (123,456.78)
-        - [[asset_id]] markers (e.g., [[img-abc123-p0-occ1]])
-
-        Args:
-            text: Raw text from ContentBlock
-
-        Returns:
-            Tuple of (encoded_text, placeholder_mapping)
-            where placeholder_mapping is {placeholder_id: original_value}
-
-        Example:
-            Input:  "Visit https://example.com or [[img-abc-p0-occ1]] for details."
-            Output: ("Visit <ph id=\"PH001\" /> or <ph id=\"ASSET_IMG_ABC_P0_OCC1\" /> for details.",
-                    {"PH001": "https://example.com",
-                     "ASSET_IMG_ABC_P0_OCC1": "[[img-abc-p0-occ1]]"})
-        """
-        if not text:
-            return text, {}
-
-        # Use existing placeholder encoding from core
-        encoded_text, placeholders = encode_placeholders(
-            text, start_index=self.config.placeholder_start_index
-        )
-
-        # Validate newlines preserved (if enabled)
-        if self.config.preserve_newlines:
-            original_newlines = text.count("\n")
-            encoded_newlines = encoded_text.count("\n")
-            if original_newlines != encoded_newlines:
-                raise ValueError(
-                    f"Newline preservation failed: "
-                    f"original={original_newlines}, encoded={encoded_newlines}"
-                )
-
-        return encoded_text, placeholders
-
-    def merge_segments(
-        self, translated_segments: List[str], original_document: KPSDocument
-    ) -> KPSDocument:
-        """
-        Reconstruct document after translation.
-
-        Takes translated segments (with placeholders still encoded) and
-        merges them back into the original document structure, then
-        decodes placeholders.
-
-        Args:
-            translated_segments: List of translated texts (same order as segment_document())
-            original_document: Original KPSDocument for structure reference
-
-        Returns:
-            New KPSDocument with translated content
-        """
-        if not translated_segments:
-            raise ValueError("Empty translated segments list")
-
-        # Count expected segments
-        expected_count = sum(len(section.blocks) for section in original_document.sections)
-
-        if len(translated_segments) != expected_count:
-            raise ValueError(
-                f"Segment count mismatch: expected {expected_count}, "
-                f"got {len(translated_segments)}"
-            )
-
-        # Create new document with same structure
+        # Create a mutable copy
         from copy import deepcopy
 
-        merged_doc = deepcopy(original_document)
+        merged = deepcopy(original)
+        idx = 0
+        for block in merged.iter_blocks():
+            block.content = translated_list[idx]
+            idx += 1
+        return merged
 
-        # Merge segments back into blocks
-        segment_idx = 0
-        for section in merged_doc.sections:
-            for block in section.blocks:
-                if segment_idx >= len(translated_segments):
-                    raise ValueError(
-                        f"Ran out of translated segments at block {block.block_id}"
-                    )
-
-                # Replace block content with translated text
-                block.content = translated_segments[segment_idx]
-                segment_idx += 1
-
-        return merged_doc
-
-    def decode_segments(
-        self, segments: List[TranslationSegment]
-    ) -> List[TranslationSegment]:
-        """
-        Decode placeholders in translated segments.
-
-        This is a convenience method for post-translation processing.
-        Typically called after translation but before merging.
-
-        Args:
-            segments: List of segments with encoded placeholders in text
-
-        Returns:
-            List of segments with decoded text
-        """
-        decoded_segments = []
-
+    def decode_segments(self, segments: Iterable[TranslationSegment]) -> List[TranslationSegment]:
+        decoded: List[TranslationSegment] = []
         for segment in segments:
-            decoded_text = decode_placeholders(segment.text, segment.placeholders)
-
-            decoded_segment = TranslationSegment(
-                segment_id=segment.segment_id,
-                text=decoded_text,
-                placeholders=segment.placeholders,  # Keep for reference
+            decoded.append(
+                TranslationSegment(
+                    segment_id=segment.segment_id,
+                    text=decode_placeholders(segment.text, segment.placeholders),
+                    placeholders=segment.placeholders,
+                )
             )
-            decoded_segments.append(decoded_segment)
+        return decoded
 
-        return decoded_segments
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+    def _segment_block(self, block: ContentBlock, index: int) -> TranslationSegment:
+        segment_id = f"{block.block_id}.seg{index}"
+        encoded_text, placeholders = encode_placeholders(
+            block.content, start_index=self.config.placeholder_start_index
+        )
+        self._ensure_length(segment_id, encoded_text)
+        if self.config.preserve_newlines:
+            self._assert_newlines(block.content, encoded_text, segment_id)
+        return TranslationSegment(segment_id=segment_id, text=encoded_text, placeholders=placeholders)
 
-    def _validate_segments(
-        self, segments: List[TranslationSegment], document: KPSDocument
-    ) -> None:
-        """
-        Validate segmentation results.
+    def _ensure_length(self, segment_id: str, text: str) -> None:
+        if len(text) > self.config.max_segment_length:
+            logger.warning(
+                "Segment %s exceeds configured max length (%s > %s)",
+                segment_id,
+                len(text),
+                self.config.max_segment_length,
+            )
 
-        Checks:
-        1. Segment count matches block count
-        2. All segments have placeholders mapping
-        3. Newlines preserved (if enabled)
-
-        Args:
-            segments: Generated segments
-            document: Source document
-
-        Raises:
-            ValueError: If validation fails
-        """
-        # Count blocks in document
-        total_blocks = sum(len(section.blocks) for section in document.sections)
-
-        # Check count
-        if len(segments) != total_blocks:
+    def _assert_newlines(self, original: str, encoded: str, segment_id: str) -> None:
+        original_count = original.count("\n")
+        encoded_count = encoded.count("\n")
+        if original_count != encoded_count:
             raise ValueError(
-                f"Segment count mismatch: {len(segments)} segments "
-                f"vs {total_blocks} blocks"
+                f"Newline preservation failed for {segment_id}: {original_count} → {encoded_count}"
             )
 
-        # Check placeholders
+    def _validate_segments(self, document: KPSDocument, segments: List[TranslationSegment]) -> None:
+        block_count = sum(1 for _ in document.iter_blocks())
+        if block_count != len(segments):
+            raise ValueError(f"Segment count mismatch: {len(segments)} vs {block_count}")
         for segment in segments:
             if segment.placeholders is None:
-                raise ValueError(
-                    f"Segment {segment.segment_id} has None placeholders "
-                    "(should be empty dict if no placeholders)"
-                )
-
-        # Validate newlines preserved (if enabled)
-        if self.config.preserve_newlines:
-            segment_idx = 0
-            for section in document.sections:
-                for block in section.blocks:
-                    if segment_idx >= len(segments):
-                        break
-
-                    segment = segments[segment_idx]
-                    original_newlines = block.content.count("\n")
-                    segment_newlines = segment.text.count("\n")
-
-                    if original_newlines != segment_newlines:
-                        raise ValueError(
-                            f"Newline preservation failed for {segment.segment_id}: "
-                            f"original={original_newlines}, segment={segment_newlines}"
-                        )
-
-                    segment_idx += 1
+                raise ValueError(f"Segment {segment.segment_id} is missing placeholder mapping")
 
 
-__all__ = ["Segmenter", "SegmenterConfig"]
+__all__ = ["Segmenter", "SegmenterConfig", "TranslationSegment"]
+
