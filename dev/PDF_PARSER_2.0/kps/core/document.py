@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 import json
 
 from .bbox import BBox
@@ -52,6 +52,7 @@ class ContentBlock:
     bbox: Optional[BBox] = None  # Position on page
     page_number: Optional[int] = None
     reading_order: int = 0  # For sorting within page
+    doc_ref: Optional[str] = None  # Reference into Docling document
 
 
 @dataclass
@@ -94,6 +95,7 @@ class KPSDocument:
     slug: str  # e.g., "bonjour-gloves"
     metadata: DocumentMetadata
     sections: List[Section] = field(default_factory=list)
+    docling_document: Optional[Any] = None  # Holds DoclingDocument when available
 
     def find_block(self, block_id: str) -> Optional[ContentBlock]:
         """Find a block by ID across all sections."""
@@ -158,6 +160,7 @@ class KPSDocument:
                             ),
                             "page_number": b.page_number,
                             "reading_order": b.reading_order,
+                            "doc_ref": b.doc_ref,
                         }
                         for b in s.blocks
                     ],
@@ -186,6 +189,7 @@ class KPSDocument:
                         bbox=BBox(**b["bbox"]) if b.get("bbox") else None,
                         page_number=b.get("page_number"),
                         reading_order=b.get("reading_order", 0),
+                        doc_ref=b.get("doc_ref"),
                     )
                     for b in s["blocks"]
                 ],

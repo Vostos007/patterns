@@ -142,6 +142,8 @@ class DoclingExtractor:
         self.current_section_type = SectionType.COVER
         self.section_counters: Dict[SectionType, int] = {}
         self.block_counters: Dict[Tuple[BlockType, SectionType], int] = {}
+        self.last_docling_document: Optional[DoclingDocument] = None
+        self.last_block_map: Dict[str, object] = {}
 
     def _create_converter(self) -> DocumentConverter:
         """Create configured Docling DocumentConverter instance."""
@@ -198,6 +200,8 @@ class DoclingExtractor:
                 raise DoclingExtractionError("Docling returned empty result")
 
             docling_doc: DoclingDocument = result.document
+            self.last_docling_document = docling_doc
+            self.last_block_map = {}
 
             # Validate document has content
             if not docling_doc.body:
@@ -217,6 +221,7 @@ class DoclingExtractor:
                 slug=slug,
                 metadata=metadata,
                 sections=sections,
+                docling_document=docling_doc,
             )
 
             logger.info(
@@ -294,15 +299,10 @@ class DoclingExtractor:
         self.block_counters.clear()
         self.current_section_type = SectionType.COVER
 
-        # Iterate through document elements
-        body_root = getattr(docling_doc, "body", [])
-        if hasattr(body_root, "children"):
-            iterable = body_root.children
-        else:
-            iterable = body_root
+        # Iterate through document elements (flattening nested groups)
+        iterable = self._iter_docling_items(docling_doc)
 
-        for raw_item in iterable:
-            item = self._resolve_docling_item(docling_doc, raw_item)
+        for doc_ref, item in iterable:
             # Get item properties
             item_type = getattr(item, "obj_type", None)
             text = getattr(item, "text", "").strip()
@@ -332,8 +332,10 @@ class DoclingExtractor:
                     text,
                     BlockType.HEADING,
                     section_type,
+                    doc_ref=doc_ref,
                 )
                 current_section.add_block(block)
+                self.last_block_map[block.block_id] = item
 
             else:
                 # Regular content block
@@ -353,14 +355,49 @@ class DoclingExtractor:
                     text,
                     block_type,
                     self.current_section_type,
+                    doc_ref=doc_ref,
                 )
                 current_section.add_block(block)
+                self.last_block_map[block.block_id] = item
 
         # Add final section
         if current_section:
             sections.append(current_section)
 
         return sections
+
+    def _iter_docling_items(self, docling_doc: DoclingDocument):
+        """
+        Yield flattened Docling items, descending into nested groups/lists.
+
+        Docling 2.x often wraps actual text nodes inside GroupItem/ListGroup
+        containers. Without flattening, large portions of the document never
+        reach the segmentation phase. This generator resolves RefItem objects
+        and yields leaf nodes paired with their document reference IDs so we can
+        stitch translations back to Docling later.
+        """
+
+        body_root = getattr(docling_doc, "body", None)
+        if body_root is None:
+            return []
+
+        children = getattr(body_root, "children", None) or body_root
+
+        def _walk(raw_item):
+            resolved = self._resolve_docling_item(docling_doc, raw_item)
+            doc_ref = getattr(raw_item, "cref", None) or getattr(
+                resolved, "cref", None
+            )
+
+            child_items = getattr(resolved, "children", None) or []
+            if child_items:
+                for child in child_items:
+                    yield from _walk(child)
+            else:
+                yield doc_ref, resolved
+
+        for child in children:
+            yield from _walk(child)
 
     def _detect_section_type(self, heading_text: str) -> SectionType:
         """
@@ -416,6 +453,7 @@ class DoclingExtractor:
         text: str,
         block_type: BlockType,
         section_type: SectionType,
+        doc_ref: Optional[str] = None,
     ) -> ContentBlock:
         """
         Create ContentBlock from Docling item.
@@ -448,6 +486,7 @@ class DoclingExtractor:
             bbox=bbox,
             page_number=page_number,
             reading_order=reading_order,
+            doc_ref=doc_ref,
         )
 
     def _resolve_docling_item(self, docling_doc: DoclingDocument, item):

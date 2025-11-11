@@ -13,6 +13,7 @@ Unified Document Processing Pipeline - единая точка входа.
 
 from __future__ import annotations
 
+import copy
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -28,6 +29,9 @@ from kps.extraction.segmenter import Segmenter, SegmenterConfig  # FIXED: correc
 from kps.core.document import KPSDocument
 
 # Translation
+from docling_core.types.doc import RefItem
+from docling_core.types.doc.document import DoclingDocument
+
 from kps.translation import (
     GlossaryManager,
     GlossaryTranslator,
@@ -72,6 +76,7 @@ from kps.export import (
     render_pdf,
     load_pdf_style_map,
 )
+from kps.export.docling_writer import apply_translations
 
 
 logger = logging.getLogger(__name__)
@@ -191,6 +196,8 @@ class UnifiedPipeline:
         self._init_translation()
         self._init_qa()
         self._init_export()
+        self.docling_document: Optional[DoclingDocument] = None
+        self.docling_block_map: Dict[str, object] = {}
 
         logger.info("UnifiedPipeline initialized")
 
@@ -279,6 +286,7 @@ class UnifiedPipeline:
             )
 
         logger.debug("Translation system initialized")
+        self.docling_document: Optional[DoclingDocument] = None
 
     def _build_term_validator(self) -> Optional[TermValidator]:
         """Build TermValidator rules from glossary entries."""
@@ -393,6 +401,8 @@ class UnifiedPipeline:
 
         errors = []
         warnings = []
+        # Reset docling document pointer for this run
+        self.docling_document = None
 
         # STEP 1: Извлечение контента
         logger.info("Step 1: Extracting content...")
@@ -401,6 +411,7 @@ class UnifiedPipeline:
             document = self._extract_content(input_path)
             pages_extracted = len(document.sections)
             logger.info(f"Extracted {pages_extracted} sections from document")
+            self.docling_document = getattr(document, "docling_document", None)
         except Exception as e:
             errors.append(f"Extraction failed: {e}")
             logger.error(f"Extraction error: {e}")
@@ -425,6 +436,7 @@ class UnifiedPipeline:
         logger.info("Step 3: Translating...")
         translations: Dict[str, List[str]] = {}
         translated_documents: Dict[str, KPSDocument] = {}
+        docling_translations: Dict[str, DoclingDocument] = {}
         total_cost = 0.0
         cache_hits = 0
         total_segments = len(segments)
@@ -442,6 +454,20 @@ class UnifiedPipeline:
                 translated_documents[target_lang] = self.segmenter.merge_segments(
                     result.segments, document
                 )
+                if self.docling_document:
+                    try:
+                        docling_doc, missing_segments = apply_translations(
+                            self.docling_document, segments, result.segments
+                        )
+                        docling_translations[target_lang] = docling_doc
+                        if missing_segments:
+                            warnings.append(
+                                f"Docling export missing {len(missing_segments)} segments for {target_lang}"
+                            )
+                    except Exception as exc:
+                        warnings.append(
+                            f"Docling export unavailable for {target_lang}: {exc}"
+                        )
                 total_cost += result.total_cost
                 cache_hits += result.cached_segments
                 glossary_terms_found = max(glossary_terms_found, result.terms_found)
@@ -491,6 +517,11 @@ class UnifiedPipeline:
 
             translations = gated_translations
             translated_documents = gated_documents
+            docling_translations = {
+                lang: docling_translations[lang]
+                for lang in gated_translations.keys()
+                if lang in docling_translations
+            }
 
         # STEP 4: QA (опционально)
         if self.config.enable_qa and self.qa_pipeline:
@@ -509,6 +540,7 @@ class UnifiedPipeline:
 
         for target_lang, translated_segments in translations.items():
             translated_doc = translated_documents[target_lang]
+            docling_doc_for_lang = docling_translations.get(target_lang)
             output_files[target_lang] = {}
 
             for fmt in format_list:
@@ -525,6 +557,7 @@ class UnifiedPipeline:
                         target_lang=target_lang,
                         original_input=input_path,
                         original_document=document,
+                        docling_document=docling_doc_for_lang,
                     )
                     output_files[target_lang][fmt] = str(output_file)
                     logger.info("Exported %s for %s", fmt, target_lang)
@@ -589,9 +622,11 @@ class UnifiedPipeline:
         # Извлечение
         if method == ExtractionMethod.DOCLING:
             logger.debug("Using Docling extractor")
-            # FIXED: Use correct method signature
             slug = input_file.stem  # Use filename as slug
-            return self.docling_extractor.extract_document(input_file, slug)
+            document = self.docling_extractor.extract_document(input_file, slug)
+            self.docling_document = self.docling_extractor.last_docling_document
+            self.docling_block_map = self.docling_extractor.last_block_map.copy()
+            return document
         else:  # PYMUPDF
             # TODO: PyMuPDFExtractor.extract_assets returns AssetLedger, not KPSDocument
             # For now, fallback to Docling
@@ -599,7 +634,10 @@ class UnifiedPipeline:
                 "PyMuPDF document extraction not implemented, using Docling fallback"
             )
             slug = input_file.stem
-            return self.docling_extractor.extract_document(input_file, slug)
+            document = self.docling_extractor.extract_document(input_file, slug)
+            self.docling_document = self.docling_extractor.last_docling_document
+            self.docling_block_map = self.docling_extractor.last_block_map.copy()
+            return document
 
     def _segment_content(self, document: KPSDocument) -> List[TranslationSegment]:
         """
@@ -651,6 +689,7 @@ class UnifiedPipeline:
         target_lang: str,
         original_input: Path,
         original_document: KPSDocument,
+        docling_document: Optional[DoclingDocument] = None,
     ) -> None:
         fmt_lower = fmt.lower()
 
