@@ -114,6 +114,31 @@ KB_ENTRIES = Gauge(
     ["category", "language"],
 )
 
+# Interoperability metrics (TBX/TMX)
+TBX_IMPORTED = Counter(
+    "kps_tbx_imported_total",
+    "Total TBX term pairs imported",
+    ["src_lang", "tgt_lang", "domain"],
+)
+
+TMX_IMPORTED = Counter(
+    "kps_tmx_imported_total",
+    "Total TMX translation pairs imported",
+    ["src_lang", "tgt_lang"],
+)
+
+TBX_EXPORT_DURATION = Histogram(
+    "kps_tbx_export_seconds",
+    "Time spent exporting TBX",
+    buckets=[0.5, 1, 2, 5, 10, 30],
+)
+
+TMX_EXPORT_DURATION = Histogram(
+    "kps_tmx_export_seconds",
+    "Time spent exporting TMX",
+    buckets=[0.5, 1, 2, 5, 10, 30, 60],
+)
+
 # Daemon metrics
 DAEMON_INBOX_FILES = Gauge(
     "kps_daemon_inbox_files",
@@ -245,6 +270,26 @@ def record_kb_search(category: str, language: str):
 def set_kb_entries(category: str, language: str, count: int):
     """Set knowledge base entry count."""
     KB_ENTRIES.labels(category=category, language=language).set(count)
+
+
+def record_tbx_import(src_lang: str, tgt_lang: str, domain: str, count: int = 1):
+    """Record TBX term pairs imported."""
+    TBX_IMPORTED.labels(src_lang=src_lang, tgt_lang=tgt_lang, domain=domain).inc(count)
+
+
+def record_tmx_import(src_lang: str, tgt_lang: str, count: int = 1):
+    """Record TMX translation pairs imported."""
+    TMX_IMPORTED.labels(src_lang=src_lang, tgt_lang=tgt_lang).inc(count)
+
+
+def record_tbx_export_duration(duration: float):
+    """Record TBX export duration."""
+    TBX_EXPORT_DURATION.observe(duration)
+
+
+def record_tmx_export_duration(duration: float):
+    """Record TMX export duration."""
+    TMX_EXPORT_DURATION.observe(duration)
 
 
 def set_daemon_inbox_files(count: int):
