@@ -1,35 +1,301 @@
-/* CSS Paged Media для печатного PDF (A4) */
+/**
+ * KPS PDF Export CSS - WeasyPrint Paged Media Styles
+ *
+ * Provides professional PDF rendering for translated documents with:
+ * - A4/A5 page sizes with proper margins
+ * - Page headers/footers with page numbers
+ * - Typography optimized for readability
+ * - Widow/orphan control
+ * - Multi-language support (Latin, Cyrillic, French typography)
+ */
+
+/* =============================================================================
+ * PAGE SETUP
+ * ============================================================================= */
 
 @page {
-  size: A4;
-  margin: 20mm 18mm 22mm 18mm;
-  @top-left    { content: string(doc_title) }
-  @top-right   { content: "Page " counter(page) " / " counter(pages) }
-  @bottom-left { content: string(section) }
-  @bottom-right{ content: date() }
+    size: A4;  /* Can be changed to A5, Letter, etc. */
+    margin: 2.5cm 2cm 2.5cm 2cm;  /* top, right, bottom, left */
+
+    /* Page headers */
+    @top-left {
+        content: "Knitting Pattern";
+        font-family: "SF Pro", "Noto Sans", sans-serif;
+        font-size: 9pt;
+        color: #666;
+    }
+
+    @top-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "SF Pro", "Noto Sans", sans-serif;
+        font-size: 9pt;
+        color: #666;
+    }
+
+    /* Page footers */
+    @bottom-center {
+        content: "";  /* Reserved for custom footer */
+        font-size: 8pt;
+        color: #999;
+    }
 }
+
+/* First page - no header */
+@page :first {
+    @top-left {
+        content: none;
+    }
+    @top-right {
+        content: none;
+    }
+}
+
+
+/* =============================================================================
+ * TYPOGRAPHY
+ * ============================================================================= */
 
 :root {
-  --text: #111;
-  --muted: #555;
-  --rule: #666;
+    /* Typography settings */
+    --font-body: "Noto Sans", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    --font-heading: "SF Pro Display", "Noto Sans", sans-serif;
+    --font-mono: "SF Mono", "Consolas", "Monaco", monospace;
+
+    /* Colors */
+    --color-text: #1a1a1a;
+    --color-heading: #000;
+    --color-muted: #666;
+    --color-border: #ddd;
+
+    /* Spacing */
+    --line-height-body: 1.6;
+    --line-height-heading: 1.2;
 }
 
-body { font-family: "Noto Serif", serif; color: var(--text); line-height: 1.38; }
-h1 { string-set: doc_title content(); page-break-before: always; }
-h2 { string-set: section content(); margin-top: 1.2em; }
-h3 { margin-top: 1em; }
-p  { orphans: 3; widows: 3; }
+body {
+    font-family: var(--font-body);
+    font-size: 11pt;
+    line-height: var(--line-height-body);
+    color: var(--color-text);
+    orphans: 2;
+    widows: 2;
+}
 
-a   { color: var(--muted); text-decoration: none; }
-pre, code { font-family: "Noto Sans Mono", monospace; }
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--color-heading);
+    line-height: var(--line-height-heading);
+    page-break-after: avoid;
+    orphans: 3;
+    widows: 3;
+}
 
-table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; }
-th, td { border: 1px solid var(--rule); padding: 4px 6px; vertical-align: top; }
-thead th { background: #f4f4f4; }
+h1 {
+    font-size: 24pt;
+    margin-top: 0;
+    margin-bottom: 20pt;
+    page-break-before: always;
+}
 
-img { max-width: 100%; page-break-inside: avoid; }
-figure { margin: 10px 0 16px; }
-figcaption { color: var(--muted); font-size: 0.9em; text-align: center; }
+h1:first-of-type {
+    page-break-before: avoid;  /* Don't break before first heading */
+}
 
-ul, ol { margin: 0.5em 0 0.8em 1.4em; }
+h2 {
+    font-size: 18pt;
+    margin-top: 18pt;
+    margin-bottom: 12pt;
+}
+
+h3 {
+    font-size: 14pt;
+    margin-top: 14pt;
+    margin-bottom: 10pt;
+}
+
+h4 {
+    font-size: 12pt;
+    margin-top: 12pt;
+    margin-bottom: 8pt;
+}
+
+/* Paragraphs */
+p {
+    margin-top: 0;
+    margin-bottom: 8pt;
+    text-align: justify;
+    hyphens: auto;  /* Automatic hyphenation */
+}
+
+/* Lists */
+ul, ol {
+    margin-top: 6pt;
+    margin-bottom: 12pt;
+    padding-left: 20pt;
+}
+
+li {
+    margin-bottom: 4pt;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12pt;
+    margin-bottom: 12pt;
+    page-break-inside: avoid;
+}
+
+th, td {
+    border: 1pt solid var(--color-border);
+    padding: 6pt 10pt;
+    text-align: left;
+}
+
+th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+/* Code blocks */
+pre, code {
+    font-family: var(--font-mono);
+    font-size: 9pt;
+    background-color: #f8f8f8;
+    page-break-inside: avoid;
+}
+
+pre {
+    padding: 10pt;
+    border-left: 3pt solid var(--color-border);
+    overflow-x: auto;
+}
+
+code {
+    padding: 2pt 4pt;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 12pt auto;
+    page-break-inside: avoid;
+}
+
+/* Horizontal rules */
+hr {
+    border: none;
+    border-top: 1pt solid var(--color-border);
+    margin: 18pt 0;
+}
+
+
+/* =============================================================================
+ * FRENCH TYPOGRAPHY (narrow non-breaking space before punctuation)
+ * ============================================================================= */
+
+/* This should be handled in preprocessing, but included for reference */
+/* French: « guillemets », : ; ! ? require U+202F (NNBSP) before */
+
+
+/* =============================================================================
+ * PAGE BREAK CONTROL
+ * ============================================================================= */
+
+/* Avoid breaks inside these elements */
+.no-break, .keep-together {
+    page-break-inside: avoid;
+}
+
+/* Force page break before */
+.page-break-before {
+    page-break-before: always;
+}
+
+/* Force page break after */
+.page-break-after {
+    page-break-after: always;
+}
+
+
+/* =============================================================================
+ * PRINT-SPECIFIC STYLES
+ * ============================================================================= */
+
+/* Hide elements that shouldn't print */
+.no-print {
+    display: none;
+}
+
+/* Ensure links are visible in print */
+a {
+    color: var(--color-text);
+    text-decoration: underline;
+}
+
+/* Optional: Show URLs in print */
+@media print {
+    a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: var(--color-muted);
+    }
+
+    /* Don't show URLs for internal links */
+    a[href^="#"]:after {
+        content: "";
+    }
+}
+
+
+/* =============================================================================
+ * CUSTOM CLASSES FOR PATTERN DOCUMENTS
+ * ============================================================================= */
+
+/* Materials list */
+.materials {
+    background-color: #f9f9f9;
+    padding: 12pt;
+    border-left: 4pt solid #4a90e2;
+    margin-bottom: 18pt;
+}
+
+.materials h3 {
+    margin-top: 0;
+}
+
+/* Instructions */
+.instructions {
+    margin-bottom: 18pt;
+}
+
+/* Abbreviations */
+.abbreviations {
+    font-size: 9pt;
+    background-color: #fafafa;
+    padding: 10pt;
+    border: 1pt solid var(--color-border);
+    margin-top: 18pt;
+}
+
+/* Notes and warnings */
+.note, .warning {
+    padding: 10pt;
+    border-left: 4pt solid;
+    margin: 12pt 0;
+}
+
+.note {
+    background-color: #e8f4fd;
+    border-color: #4a90e2;
+}
+
+.warning {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+}
