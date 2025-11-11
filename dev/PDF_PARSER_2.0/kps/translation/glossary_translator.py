@@ -27,6 +27,7 @@ from .orchestrator import (
     TranslationSegment,
 )
 from .translation_memory import TranslationMemory
+from kps.core.placeholders import decode_placeholders
 
 logger = logging.getLogger(__name__)
 
@@ -210,16 +211,22 @@ class GlossaryTranslator:
         )
 
         # Extract translated segments
-        new_translations = batch_result.translations[target_language].segments
+        batch_output = batch_result.translations[target_language].segments
+
+        decoded_batch: List[str] = []
+        for segment, translation in zip(segments_to_translate, batch_output):
+            decoded_batch.append(
+                decode_placeholders(translation, segment.placeholders)
+            )
 
         # Merge cached and new translations
-        for idx, translation in zip(segment_indices, new_translations):
+        for idx, translation in zip(segment_indices, decoded_batch):
             translated_segments[idx] = translation
 
         # Save to memory
         new_suggestions = 0
         if self.memory:
-            for segment, translation in zip(segments_to_translate, new_translations):
+            for segment, translation in zip(segments_to_translate, decoded_batch):
                 if translation.strip() == segment.text.strip():
                     logger.warning(
                         "Skipping cache for %s because translation == source",

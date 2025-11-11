@@ -1,0 +1,118 @@
+^D/Users/vostos/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Processing: КАРДИГАН peer gynt.docx
+Languages: en
+Output: tmp/output_en
+2025-11-11 19:43:22,188 [INFO] kps.extraction.docling_extractor: Initialized Docling converter (OCR: True, languages: ['ru', 'en', 'fr'])
+2025-11-11 19:43:22,202 [INFO] kps.core.unified_pipeline: Semantic memory initialized (embeddings + RAG)
+2025-11-11 19:43:22,202 [INFO] kps.core.unified_pipeline: UnifiedPipeline initialized
+2025-11-11 19:43:22,202 [INFO] kps.core.unified_pipeline: Processing: КАРДИГАН peer gynt.docx
+2025-11-11 19:43:22,202 [INFO] kps.core.unified_pipeline: Target languages: ['en']
+2025-11-11 19:43:22,202 [INFO] kps.core.unified_pipeline: Step 1: Extracting content...
+2025-11-11 19:43:22,202 [INFO] kps.extraction.docling_extractor: Extracting document from КАРДИГАН peer gynt.docx
+2025-11-11 19:43:22,204 [INFO] docling.datamodel.document: detected formats: [<InputFormat.DOCX: 'docx'>]
+2025-11-11 19:43:22,208 [INFO] docling.document_converter: Going to convert document batch...
+2025-11-11 19:43:22,208 [INFO] docling.document_converter: Initializing pipeline for SimplePipeline with options hash 995a146ad601044538e6a923bea22f4e
+2025-11-11 19:43:22,219 [INFO] docling.models.factories.base_factory: Loading plugin 'docling_defaults'
+2025-11-11 19:43:22,220 [INFO] docling.models.factories: Registered picture descriptions: ['vlm', 'api']
+2025-11-11 19:43:22,220 [INFO] docling.pipeline.base_pipeline: Processing document КАРДИГАН peer gynt.docx
+2025-11-11 19:43:22,434 [INFO] docling.document_converter: Finished converting document КАРДИГАН peer gynt.docx in 0.23 sec.
+2025-11-11 19:43:22,435 [INFO] kps.extraction.docling_extractor: Extracted 1 sections, 199 total blocks
+2025-11-11 19:43:22,436 [INFO] kps.core.unified_pipeline: Extracted 1 sections from document
+2025-11-11 19:43:22,436 [INFO] kps.core.unified_pipeline: Step 2: Segmenting content...
+2025-11-11 19:43:22,437 [INFO] kps.core.unified_pipeline: Created 199 segments
+2025-11-11 19:43:23,430 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:43:23,440 [INFO] kps.core.unified_pipeline: Source language: ru
+2025-11-11 19:43:23,440 [INFO] kps.core.unified_pipeline: Step 3: Translating...
+2025-11-11 19:43:23,440 [INFO] kps.core.unified_pipeline: Translating to en...
+2025-11-11 19:43:24,146 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:43:35,704 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:43:42,703 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:43:57,152 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:44:07,983 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:44:23,001 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:44:32,652 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:44:45,735 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:44:54,876 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:45:04,932 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:45:11,463 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:45:20,884 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:45:29,776 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:45:45,257 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:45:51,499 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:46:01,621 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:46:20,430 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:46:35,632 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:46:49,745 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:46:55,821 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:10,966 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:13,065 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:17,905 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:19,664 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:20,406 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:21,150 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:21,864 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:22,644 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:23,275 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:24,212 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:25,301 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:25,868 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:26,837 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:27,749 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:28,643 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:29,324 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:30,960 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:32,564 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:33,408 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:35,709 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:36,309 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:37,380 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:39,593 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:40,506 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:41,396 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:42,629 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:44,078 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:45,249 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:47,319 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:48,722 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:49,891 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:51,344 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:52,437 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:53,256 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:56,080 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:56,786 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:57,640 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:47:58,686 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:00,409 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:03,205 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:04,489 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:08,268 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:09,171 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:10,104 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:11,071 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:11,803 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:15,155 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:16,835 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:18,187 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:19,548 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-11-11 19:48:19,565 [INFO] kps.translation.orchestrator: Term validation corrected 3 violations for 199 segments
+2025-11-11 19:48:40,053 [WARNING] kps.translation.glossary_translator: Skipping cache for p.cover.166.seg165 because translation == source
+2025-11-11 19:48:42,904 [WARNING] kps.translation.glossary_translator: Skipping cache for p.cover.177.seg176 because translation == source
+2025-11-11 19:48:46,680 [INFO] kps.core.unified_pipeline: en: 0/199 from cache
+2025-11-11 19:48:46,680 [INFO] kps.core.unified_pipeline: Step 3b: Translation QA gate...
+2025-11-11 19:48:46,780 [INFO] kps.core.unified_pipeline: Step 5: Exporting...
+2025-11-11 19:48:46,783 [INFO] kps.core.unified_pipeline: Exported: КАРДИГАН peer gynt_en.idml
+2025-11-11 19:48:46,783 [INFO] kps.core.unified_pipeline: Processing complete in 324.6s
+2025-11-11 19:48:46,783 [INFO] kps.core.unified_pipeline: Cache hit rate: 0%
+2025-11-11 19:48:46,783 [INFO] kps.core.unified_pipeline: Translation cost: $0.0076
+
+============================================================
+[32m[1m✓ Translation complete![0m
+============================================================
+Segments translated: 199
+Cache hit rate: 0%
+Translation cost: $0.0076
+Processing time: 324.6s
+
+Output files:
+  en: tmp/output_en/КАРДИГАН peer gynt_en.idml

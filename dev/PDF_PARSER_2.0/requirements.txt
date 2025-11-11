@@ -9,6 +9,8 @@ pillow>=10.0.0
 camelot-py[cv]>=0.11.0
 pdfplumber>=0.10.0
 python-dotenv>=1.0.0
+python-docx>=0.8.11
+weasyprint>=62.2
 
 # Dev dependencies
 pytest>=8.0.0
