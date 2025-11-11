@@ -1,0 +1,403 @@
+# KPS Style Mapping Contract
+# Unified design system: Markdown ’ DOCX ’ PDF ’ IDML
+# Version: 1.0.0
+# Purpose: Ensure consistent styling across all export formats
+
+version: "1.0.0"
+description: "KPS unified style mapping for multi-format export"
+
+# =============================================================================
+# MARKDOWN TO DOCX MAPPING
+# =============================================================================
+markdown_to_docx:
+  h1:
+    docx_style: "Heading 1"
+    attributes:
+      font_size: 24
+      bold: true
+      space_before: 0
+      space_after: 20
+      keep_with_next: true
+
+  h2:
+    docx_style: "Heading 2"
+    attributes:
+      font_size: 18
+      bold: true
+      space_before: 18
+      space_after: 12
+      keep_with_next: true
+
+  h3:
+    docx_style: "Heading 3"
+    attributes:
+      font_size: 14
+      bold: true
+      space_before: 14
+      space_after: 10
+      keep_with_next: true
+
+  h4:
+    docx_style: "Heading 4"
+    attributes:
+      font_size: 12
+      bold: true
+      space_before: 12
+      space_after: 8
+
+  paragraph:
+    docx_style: "Body Text"
+    attributes:
+      font_size: 11
+      line_spacing: 1.6
+      space_after: 8
+      alignment: justify
+
+  blockquote:
+    docx_style: "Quote"
+    attributes:
+      font_size: 10
+      italic: true
+      left_indent: 20
+      space_before: 6
+      space_after: 6
+
+  code_block:
+    docx_style: "Code"
+    attributes:
+      font_family: "Consolas"
+      font_size: 9
+      space_before: 6
+      space_after: 6
+      background: "#f8f8f8"
+
+  code_inline:
+    docx_style: "Code Inline"
+    attributes:
+      font_family: "Consolas"
+      font_size: 9
+      background: "#f0f0f0"
+
+  list_bullet:
+    docx_style: "List Bullet"
+    attributes:
+      left_indent: 20
+      space_after: 4
+
+  list_number:
+    docx_style: "List Number"
+    attributes:
+      left_indent: 20
+      space_after: 4
+
+  table_header:
+    docx_style: "Table Header"
+    attributes:
+      bold: true
+      background: "#f5f5f5"
+      border: true
+
+  table_body:
+    docx_style: "Table Body"
+    attributes:
+      border: true
+      valign: "top"
+
+  caption:
+    docx_style: "Caption"
+    attributes:
+      font_size: 9
+      italic: true
+      space_before: 4
+      space_after: 10
+
+
+# =============================================================================
+# DOCX TO IDML MAPPING
+# =============================================================================
+docx_to_idml:
+  "Heading 1":
+    idml_style: "H1"
+    paragraph_style: "heading_1"
+    character_style: null
+
+  "Heading 2":
+    idml_style: "H2"
+    paragraph_style: "heading_2"
+    character_style: null
+
+  "Heading 3":
+    idml_style: "H3"
+    paragraph_style: "heading_3"
+    character_style: null
+
+  "Heading 4":
+    idml_style: "H4"
+    paragraph_style: "heading_4"
+    character_style: null
+
+  "Body Text":
+    idml_style: "Body"
+    paragraph_style: "body_text"
+    character_style: null
+
+  "Quote":
+    idml_style: "Quote"
+    paragraph_style: "blockquote"
+    character_style: "italic"
+
+  "Code":
+    idml_style: "Code"
+    paragraph_style: "code_block"
+    character_style: "monospace"
+
+  "Code Inline":
+    idml_style: "CodeInline"
+    paragraph_style: null
+    character_style: "code_inline"
+
+  "List Bullet":
+    idml_style: "BulletList"
+    paragraph_style: "list_bullet"
+    character_style: null
+
+  "List Number":
+    idml_style: "NumberList"
+    paragraph_style: "list_number"
+    character_style: null
+
+  "Table Header":
+    idml_style: "TblHeader"
+    paragraph_style: "table_header"
+    character_style: null
+
+  "Table Body":
+    idml_style: "TblBody"
+    paragraph_style: "table_body"
+    character_style: null
+
+  "Caption":
+    idml_style: "Caption"
+    paragraph_style: "caption"
+    character_style: "caption_text"
+
+
+# =============================================================================
+# CSS CLASS MAPPING (for PDF export via WeasyPrint)
+# =============================================================================
+markdown_to_css:
+  h1: "heading-1"
+  h2: "heading-2"
+  h3: "heading-3"
+  h4: "heading-4"
+  paragraph: "body-text"
+  blockquote: "quote"
+  code_block: "code-block"
+  code_inline: "code-inline"
+  list_bullet: "list-bullet"
+  list_number: "list-number"
+  table_header: "table-header"
+  table_body: "table-body"
+  caption: "caption"
+
+
+# =============================================================================
+# LOCALE-SPECIFIC TYPOGRAPHY RULES
+# =============================================================================
+locale_typography:
+  ru:
+    quotes:
+      opening: "«"
+      closing: "»"
+    dash: ""  # em-dash
+    decimal_separator: ","
+    thousands_separator: " "  # U+00A0 NBSP
+    hyphenation: true
+    hyphenation_lang: "ru"
+
+  fr:
+    quotes:
+      opening: "« "  # with U+202F NNBSP
+      closing: " »"  # with U+202F NNBSP
+    dash: ""  # en-dash
+    decimal_separator: ","
+    thousands_separator: " "  # U+00A0 NBSP
+    punctuation_spacing:  # U+202F NNBSP before these
+      - ":"
+      - ";"
+      - "!"
+      - "?"
+    hyphenation: true
+    hyphenation_lang: "fr"
+
+  en:
+    quotes:
+      opening: """
+      closing: """
+    dash: ""  # en-dash
+    decimal_separator: "."
+    thousands_separator: ","
+    hyphenation: true
+    hyphenation_lang: "en-US"
+
+
+# =============================================================================
+# DOMAIN-SPECIFIC CLASSES (Knitting/Sewing Patterns)
+# =============================================================================
+domain_classes:
+  materials:
+    docx_style: "Materials"
+    css_class: "materials"
+    idml_style: "Materials"
+    attributes:
+      background: "#f9f9f9"
+      border_left: "4pt solid #4a90e2"
+      padding: 12
+
+  instructions:
+    docx_style: "Instructions"
+    css_class: "instructions"
+    idml_style: "Instructions"
+    attributes:
+      space_after: 18
+
+  abbreviations:
+    docx_style: "Abbreviations"
+    css_class: "abbreviations"
+    idml_style: "Abbreviations"
+    attributes:
+      font_size: 9
+      background: "#fafafa"
+      border: "1pt solid #ddd"
+      padding: 10
+
+  note:
+    docx_style: "Note"
+    css_class: "note"
+    idml_style: "Note"
+    attributes:
+      background: "#e8f4fd"
+      border_left: "4pt solid #4a90e2"
+      padding: 10
+
+  warning:
+    docx_style: "Warning"
+    css_class: "warning"
+    idml_style: "Warning"
+    attributes:
+      background: "#fff3cd"
+      border_left: "4pt solid #ffc107"
+      padding: 10
+
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+validation:
+  docx:
+    # Check that no direct formatting is applied
+    no_direct_formatting: true
+    # All text must use defined styles
+    require_style_for_all: true
+    # Fonts must be from approved list
+    allowed_fonts:
+      - "Noto Sans"
+      - "Noto Serif"
+      - "SF Pro"
+      - "Consolas"
+      - "Monaco"
+
+  pdf:
+    # No widows/orphans
+    min_orphans: 2
+    min_widows: 2
+    # Page breaks
+    avoid_break_inside:
+      - "table"
+      - "figure"
+      - "code_block"
+    # Accessibility
+    require_alt_text: true
+    require_headings_hierarchy: true
+
+  idml:
+    # All styles must exist in template
+    validate_styles_exist: true
+    # No missing fonts
+    check_missing_fonts: true
+    # No overset text
+    check_overset: true
+
+
+# =============================================================================
+# FONT STACKS (fallback chains)
+# =============================================================================
+fonts:
+  body:
+    primary: "Noto Sans"
+    fallbacks:
+      - "SF Pro"
+      - "-apple-system"
+      - "BlinkMacSystemFont"
+      - "Segoe UI"
+      - "Arial"
+      - "sans-serif"
+
+  heading:
+    primary: "SF Pro Display"
+    fallbacks:
+      - "Noto Sans"
+      - "Arial"
+      - "sans-serif"
+
+  mono:
+    primary: "SF Mono"
+    fallbacks:
+      - "Consolas"
+      - "Monaco"
+      - "Courier New"
+      - "monospace"
+
+  serif:
+    primary: "Noto Serif"
+    fallbacks:
+      - "Georgia"
+      - "Times New Roman"
+      - "serif"
+
+
+# =============================================================================
+# PAGE LAYOUT SETTINGS
+# =============================================================================
+page_layout:
+  docx:
+    page_size: "A4"
+    orientation: "portrait"
+    margins:
+      top: 2.5cm
+      right: 2cm
+      bottom: 2.5cm
+      left: 2cm
+    header_distance: 1.5cm
+    footer_distance: 1.5cm
+
+  pdf:
+    page_size: "A4"
+    orientation: "portrait"
+    margins:
+      top: 2.5cm
+      right: 2cm
+      bottom: 2.5cm
+      left: 2cm
+    bleed: 0mm  # Add 3mm for print-ready
+
+  idml:
+    page_size: "A4"
+    orientation: "portrait"
+    margins:
+      top: 2.5cm
+      right: 2cm
+      bottom: 2.5cm
+      left: 2cm
+    columns: 1
+    gutter: 0cm
