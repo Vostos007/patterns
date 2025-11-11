@@ -49,6 +49,15 @@ from .splitter import (
     categorize_section,
 )
 
+from .chunker import (
+    ContextAwareChunker,
+    Chunk,
+    ChunkMetadata,
+    ChunkingStrategy,
+    CHUNK_SIZE_PRESETS,
+    estimate_optimal_chunk_size,
+)
+
 __all__ = [
     # Base
     "KnowledgeBase",
@@ -63,4 +72,11 @@ __all__ = [
     "DocumentSection",
     "SplitStrategy",
     "categorize_section",
+    # Chunker
+    "ContextAwareChunker",
+    "Chunk",
+    "ChunkMetadata",
+    "ChunkingStrategy",
+    "CHUNK_SIZE_PRESETS",
+    "estimate_optimal_chunk_size",
 ]

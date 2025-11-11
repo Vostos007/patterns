@@ -41,6 +41,14 @@ except ImportError:
 # Import splitter for section-based ingestion
 from .splitter import DocumentSplitter, SplitStrategy, categorize_section
 
+# Import chunker for context-aware RAG
+from .chunker import (
+    ContextAwareChunker,
+    ChunkingStrategy,
+    CHUNK_SIZE_PRESETS,
+    estimate_optimal_chunk_size,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +129,12 @@ class KnowledgeBase:
         use_embeddings: bool = True,
         split_sections: bool = True,
         split_strategy: SplitStrategy = SplitStrategy.AUTO,
+        # NEW: Context-aware chunking parameters
+        use_chunking: bool = True,  # Разбивать секции на чанки с overlap
+        chunk_size: int = 1000,  # Размер чанка (символов)
+        chunk_overlap: int = 200,  # Overlap между чанками
+        chunking_strategy: ChunkingStrategy = ChunkingStrategy.SEMANTIC,
+        model_preset: Optional[str] = "claude-3",  # Предустановка для модели
     ):
         """
         Инициализация базы знаний.
@@ -130,11 +144,31 @@ class KnowledgeBase:
             use_embeddings: Использовать embeddings для поиска
             split_sections: Разбивать документы на секции (рекомендуется!)
             split_strategy: Стратегия разбиения (AUTO, MARKDOWN, CHAPTERS, etc.)
+            use_chunking: Разбивать секции на чанки с overlap (для RAG)
+            chunk_size: Размер чанка в символах
+            chunk_overlap: Размер overlap между чанками
+            chunking_strategy: Стратегия chunking (SEMANTIC, FIXED_SIZE, etc.)
+            model_preset: Предустановка размера чанков для модели (gpt-4, claude-3, etc.)
         """
         self.db_path = Path(db_path)
         self.use_embeddings = use_embeddings and NUMPY_AVAILABLE
         self.split_sections = split_sections
         self.split_strategy = split_strategy
+        self.use_chunking = use_chunking
+        self.chunking_strategy = chunking_strategy
+
+        # Применить предустановку если указана
+        if model_preset and model_preset in CHUNK_SIZE_PRESETS:
+            preset = CHUNK_SIZE_PRESETS[model_preset]
+            self.chunk_size = preset["recommended_chunk_size"]
+            self.chunk_overlap = preset["overlap"]
+            logger.info(
+                f"Using chunk size preset '{model_preset}': "
+                f"chunk_size={self.chunk_size}, overlap={self.chunk_overlap}"
+            )
+        else:
+            self.chunk_size = chunk_size
+            self.chunk_overlap = chunk_overlap
 
         # Создать БД
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,9 +187,26 @@ class KnowledgeBase:
         else:
             self.splitter = None
 
+        # Context-aware chunker для разбиения на чанки с overlap
+        if self.use_chunking:
+            self.chunker = ContextAwareChunker(
+                chunk_size=self.chunk_size,
+                overlap_size=self.chunk_overlap,
+                min_chunk_size=100,
+                max_chunk_size=self.chunk_size * 2,
+                strategy=self.chunking_strategy,
+                preserve_sentences=True,
+                preserve_paragraphs=False,
+            )
+        else:
+            self.chunker = None
+
         logger.info(
             f"KnowledgeBase initialized: {db_path} "
-            f"(split_sections={split_sections}, embeddings={self.use_embeddings})"
+            f"(split_sections={split_sections}, "
+            f"use_chunking={use_chunking}, "
+            f"chunk_size={self.chunk_size}, "
+            f"embeddings={self.use_embeddings})"
         )
 
     def _init_database(self):
@@ -313,34 +364,87 @@ class KnowledgeBase:
                 else:
                     section_category = category
 
-                # Метаданные секции
-                section_metadata = {
-                    **base_metadata,
-                    "section_level": section.level,
-                    "section_start": section.start_pos,
-                    "section_end": section.end_pos,
-                    "parent_section": section.parent_title,
-                    "document_title": title,
-                }
+                # НОВОЕ: Разбить секцию на чанки с overlap если включено
+                if self.use_chunking and self.chunker:
+                    # Разбить секцию на чанки
+                    chunks = self.chunker.chunk(
+                        section.content, source_id=f"{file_path.name}:{section.title}"
+                    )
 
-                # Извлечь ключевые слова из секции
-                section_keywords = self._extract_keywords(section.content)
+                    # Создать entry для каждого чанка
+                    for chunk in chunks:
+                        # Метаданные чанка
+                        chunk_metadata = {
+                            **base_metadata,
+                            "section_level": section.level,
+                            "section_start": section.start_pos,
+                            "section_end": section.end_pos,
+                            "parent_section": section.parent_title,
+                            "document_title": title,
+                            # Метаданные чанка
+                            "chunk_id": chunk.metadata.chunk_id,
+                            "chunk_position": chunk.metadata.position,
+                            "total_chunks": chunk.metadata.total_chunks,
+                            "prev_chunk_id": chunk.metadata.prev_chunk_id,
+                            "next_chunk_id": chunk.metadata.next_chunk_id,
+                            "chunk_level": chunk.metadata.level,
+                            # Overlap контекст
+                            "prefix_context": chunk.prefix_context,
+                            "suffix_context": chunk.suffix_context,
+                            "overlap_prev": chunk.metadata.overlap_with_prev,
+                            "overlap_next": chunk.metadata.overlap_with_next,
+                        }
 
-                entry = KnowledgeEntry(
-                    id=None,
-                    category=section_category,
-                    title=section.title,
-                    content=section.content,
-                    language=language,
-                    source_file=str(file_path),
-                    metadata=section_metadata,
-                    keywords=section_keywords,
-                )
-                entries.append(entry)
+                        # Извлечь ключевые слова из чанка
+                        chunk_keywords = self._extract_keywords(chunk.text)
+
+                        # Заголовок чанка
+                        chunk_title = section.title
+                        if chunk.metadata.total_chunks > 1:
+                            chunk_title += f" [Part {chunk.metadata.chunk_id + 1}/{chunk.metadata.total_chunks}]"
+
+                        entry = KnowledgeEntry(
+                            id=None,
+                            category=section_category,
+                            title=chunk_title,
+                            content=chunk.text,  # Основной текст чанка (без overlap)
+                            language=language,
+                            source_file=str(file_path),
+                            metadata=chunk_metadata,
+                            keywords=chunk_keywords,
+                        )
+                        entries.append(entry)
+
+                else:
+                    # Без chunking: секция как одна запись
+                    # Метаданные секции
+                    section_metadata = {
+                        **base_metadata,
+                        "section_level": section.level,
+                        "section_start": section.start_pos,
+                        "section_end": section.end_pos,
+                        "parent_section": section.parent_title,
+                        "document_title": title,
+                    }
+
+                    # Извлечь ключевые слова из секции
+                    section_keywords = self._extract_keywords(section.content)
+
+                    entry = KnowledgeEntry(
+                        id=None,
+                        category=section_category,
+                        title=section.title,
+                        content=section.content,
+                        language=language,
+                        source_file=str(file_path),
+                        metadata=section_metadata,
+                        keywords=section_keywords,
+                    )
+                    entries.append(entry)
 
             logger.info(
-                f"Split '{file_path.name}' into {len(entries)} sections "
-                f"({', '.join(set(e.category.value for e in entries))})"
+                f"Processed '{file_path.name}': {len(sections)} sections → {len(entries)} entries "
+                f"(chunking={'ON' if self.use_chunking else 'OFF'})"
             )
             return entries
 
@@ -640,18 +744,25 @@ class KnowledgeBase:
         return results
 
     def get_translation_context(
-        self, text: str, source_lang: str, target_lang: str, limit: int = 3
+        self,
+        text: str,
+        source_lang: str,
+        target_lang: str,
+        limit: int = 3,
+        include_chunk_context: bool = True,
     ) -> str:
         """
         Получить контекст для перевода из базы знаний.
 
         Ищет релевантные примеры и термины для улучшения перевода.
+        Если используются чанки с overlap, возвращает расширенный контекст.
 
         Args:
             text: Текст для перевода
             source_lang: Исходный язык
             target_lang: Целевой язык
             limit: Количество примеров
+            include_chunk_context: Включить overlap контекст из чанков
 
         Returns:
             Контекст для добавления в промпт
@@ -665,10 +776,37 @@ class KnowledgeBase:
         # Форматировать контекст
         context = "\n\nКонтекст из базы знаний:\n"
 
-        for entry in results:
-            context += f"\nКатегория: {entry.category.value}\n"
-            context += f"Термины: {', '.join(entry.keywords[:5]) if entry.keywords else 'N/A'}\n"
-            context += f"Фрагмент: {entry.content[:200]}...\n"
+        for i, entry in enumerate(results, 1):
+            context += f"\n[{i}] {entry.title}\n"
+            context += f"Категория: {entry.category.value}\n"
+
+            # Ключевые слова
+            if entry.keywords:
+                context += f"Термины: {', '.join(entry.keywords[:5])}\n"
+
+            # Основной текст
+            content_text = entry.content
+
+            # НОВОЕ: Добавить overlap контекст если доступен
+            if include_chunk_context and self.use_chunking:
+                prefix = entry.metadata.get("prefix_context", "")
+                suffix = entry.metadata.get("suffix_context", "")
+
+                if prefix:
+                    content_text = f"...{prefix}{content_text}"
+                if suffix:
+                    content_text = f"{content_text}{suffix}..."
+
+            # Ограничить длину для RAG промпта
+            max_length = self.chunk_size if self.use_chunking else 500
+            if len(content_text) > max_length:
+                content_text = content_text[:max_length] + "..."
+
+            context += f"Контекст: {content_text}\n"
+
+            # Метаданные чанка (если есть)
+            if "chunk_id" in entry.metadata:
+                context += f"(Чанк {entry.metadata['chunk_id']+1}/{entry.metadata['total_chunks']} из '{entry.metadata.get('document_title', 'неизвестно')}')\n"
 
         return context
 
