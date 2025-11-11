@@ -198,12 +198,12 @@ def record_glossary_term_applied(source_lang: str, target_lang: str):
     ).inc()
 
 
-def record_term_violation(violation_type: str, target_lang: str):
+def record_term_violation(violation_type: str, target_lang: str, count: int = 1):
     """Record term violation."""
     TERM_VIOLATIONS.labels(
         violation_type=violation_type,
         target_lang=target_lang
-    ).inc()
+    ).inc(count)
 
 
 def record_extraction_duration(extractor: str, duration: float):

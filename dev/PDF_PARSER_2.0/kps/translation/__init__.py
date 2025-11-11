@@ -20,6 +20,18 @@ from .translation_memory import (
     SuggestedGlossaryTerm,
 )
 
+# Term validation (P2)
+from .term_validator import (
+    TermRule,
+    TermValidator,
+    Violation,
+    load_rules_from_glossary,
+)
+from .structured_translator import (
+    StructuredTranslator,
+    StructuredTranslationResult,
+)
+
 # Advanced: Semantic memory with embeddings
 try:
     from .semantic_memory import (
@@ -82,6 +94,13 @@ __all__ = [
     "TranslationMemory",
     "TranslationMemoryEntry",
     "SuggestedGlossaryTerm",
+    # Term validation (P2)
+    "TermRule",
+    "TermValidator",
+    "Violation",
+    "load_rules_from_glossary",
+    "StructuredTranslator",
+    "StructuredTranslationResult",
     # Core components
     "TranslationOrchestrator",
     "TranslationSegment",
