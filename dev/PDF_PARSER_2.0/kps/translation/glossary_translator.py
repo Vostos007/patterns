@@ -1,5 +1,4 @@
-"""
-Simple and fast glossary-driven translation with self-learning.
+"""Simple and fast glossary-driven translation with self-learning.
 
 This module provides a streamlined translation system focused on:
 - Fast glossary term matching
