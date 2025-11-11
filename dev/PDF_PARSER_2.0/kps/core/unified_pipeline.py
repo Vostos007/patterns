@@ -22,7 +22,10 @@ from typing import Dict, List, Optional, Union
 # Extraction
 from kps.extraction.docling_extractor import DoclingExtractor
 from kps.extraction.pymupdf_extractor import PyMuPDFExtractor
-from kps.extraction.segmenter import ContentSegmenter
+from kps.extraction.segmenter import Segmenter, SegmenterConfig  # FIXED: correct class name
+
+# Core
+from kps.core.document import KPSDocument
 
 # Translation
 from kps.translation import (
@@ -33,6 +36,13 @@ from kps.translation import (
     TranslationOrchestrator,
 )
 from kps.translation.orchestrator import TranslationSegment
+
+# Knowledge Base (NEW: integrate KB layer)
+try:
+    from kps.knowledge import KnowledgeBase
+    KNOWLEDGE_AVAILABLE = True
+except ImportError:
+    KNOWLEDGE_AVAILABLE = False
 
 # InDesign
 try:
@@ -85,6 +95,10 @@ class PipelineConfig:
     glossary_path: Optional[str] = "glossary.yaml"
     enable_few_shot: bool = True
     enable_auto_suggestions: bool = True
+
+    # Knowledge Base (NEW)
+    enable_knowledge_base: bool = True  # Включить RAG
+    knowledge_db_path: Optional[str] = "data/knowledge.db"
 
     # QA
     enable_qa: bool = False  # QA проверка (опционально)
@@ -172,7 +186,10 @@ class UnifiedPipeline:
         """Инициализация извлекателей."""
         self.docling_extractor = DoclingExtractor()
         self.pymupdf_extractor = PyMuPDFExtractor()
-        self.segmenter = ContentSegmenter()
+
+        # FIXED: Use correct Segmenter class with config
+        segmenter_config = SegmenterConfig()
+        self.segmenter = Segmenter(segmenter_config)
 
         logger.debug("Extractors initialized")
 
@@ -201,6 +218,24 @@ class UnifiedPipeline:
                 self.memory = TranslationMemory(self.config.memory_path)
                 logger.info("Simple memory initialized (JSON cache)")
 
+        # Knowledge Base (NEW: integrate KB layer for RAG)
+        self.knowledge_base = None
+        if self.config.enable_knowledge_base and KNOWLEDGE_AVAILABLE:
+            if self.config.knowledge_db_path:
+                kb_path = Path(self.config.knowledge_db_path)
+                # Create parent directory if needed
+                kb_path.parent.mkdir(parents=True, exist_ok=True)
+
+                self.knowledge_base = KnowledgeBase(
+                    str(kb_path),
+                    use_embeddings=True,
+                    split_sections=True,
+                    use_chunking=True,
+                )
+                logger.info(f"Knowledge Base initialized: {kb_path}")
+            else:
+                logger.warning("Knowledge Base enabled but no path specified")
+
         # Translator
         self.translator = GlossaryTranslator(
             self.orchestrator,
@@ -209,6 +244,11 @@ class UnifiedPipeline:
             enable_few_shot=self.config.enable_few_shot,
             enable_auto_suggestions=self.config.enable_auto_suggestions,
         )
+
+        # FIXED: Connect Knowledge Base to translator for RAG
+        if self.knowledge_base:
+            self.translator.knowledge_base = self.knowledge_base
+            logger.info("Knowledge Base connected to translator (RAG enabled)")
 
         logger.debug("Translation system initialized")
 
@@ -272,9 +312,10 @@ class UnifiedPipeline:
         # STEP 1: Извлечение контента
         logger.info("Step 1: Extracting content...")
         try:
-            extraction_result = self._extract_content(input_path)
-            pages_extracted = len(extraction_result.get("pages", []))
-            logger.info(f"Extracted {pages_extracted} pages")
+            # FIXED: _extract_content returns KPSDocument now
+            document = self._extract_content(input_path)
+            pages_extracted = len(document.sections)
+            logger.info(f"Extracted {pages_extracted} sections from document")
         except Exception as e:
             errors.append(f"Extraction failed: {e}")
             logger.error(f"Extraction error: {e}")
@@ -283,7 +324,8 @@ class UnifiedPipeline:
         # STEP 2: Сегментация
         logger.info("Step 2: Segmenting content...")
         try:
-            segments = self._segment_content(extraction_result)
+            # FIXED: _segment_content accepts KPSDocument now
+            segments = self._segment_content(document)
             logger.info(f"Created {len(segments)} segments")
         except Exception as e:
             errors.append(f"Segmentation failed: {e}")
@@ -324,7 +366,9 @@ class UnifiedPipeline:
                 logger.error(f"Translation error ({target_lang}): {e}")
                 continue
 
-        cache_hit_rate = cache_hits / (total_segments * len(target_languages))
+        # FIXED: Add zero division protection
+        total_operations = total_segments * len(target_languages)
+        cache_hit_rate = cache_hits / total_operations if total_operations > 0 else 0.0
 
         # STEP 4: QA (опционально)
         if self.config.enable_qa and self.qa_pipeline:
@@ -387,51 +431,63 @@ class UnifiedPipeline:
 
         return result
 
-    def _extract_content(self, input_file: Path) -> Dict:
-        """Извлечь контент из файла."""
+    def _extract_content(self, input_file: Path) -> KPSDocument:
+        """
+        Извлечь контент из файла.
+
+        FIXED: Returns KPSDocument instead of Dict.
+        Uses proper extractor interface (extract_document).
+
+        Args:
+            input_file: Path to input file (PDF, DOCX, etc.)
+
+        Returns:
+            KPSDocument with structured content
+        """
         method = self.config.extraction_method
 
         # Автоматический выбор
         if method == ExtractionMethod.AUTO:
-            # Для PDF используем PyMuPDF (быстрее)
-            # Для сложных случаев - Docling
+            # Для PDF используем Docling (AI-powered, лучшее качество)
             if input_file.suffix.lower() == ".pdf":
-                method = ExtractionMethod.PYMUPDF
+                method = ExtractionMethod.DOCLING
             else:
                 method = ExtractionMethod.DOCLING
 
         # Извлечение
         if method == ExtractionMethod.DOCLING:
             logger.debug("Using Docling extractor")
-            return self.docling_extractor.extract(str(input_file))
+            # FIXED: Use correct method signature
+            slug = input_file.stem  # Use filename as slug
+            return self.docling_extractor.extract_document(input_file, slug)
         else:  # PYMUPDF
-            logger.debug("Using PyMuPDF extractor")
-            return self.pymupdf_extractor.extract(str(input_file))
+            # TODO: PyMuPDFExtractor.extract_assets returns AssetLedger, not KPSDocument
+            # For now, fallback to Docling
+            logger.warning(
+                "PyMuPDF document extraction not implemented, using Docling fallback"
+            )
+            slug = input_file.stem
+            return self.docling_extractor.extract_document(input_file, slug)
 
-    def _segment_content(self, extraction_result: Dict) -> List[TranslationSegment]:
-        """Сегментировать контент для перевода."""
-        segments = []
+    def _segment_content(self, document: KPSDocument) -> List[TranslationSegment]:
+        """
+        Сегментировать контент для перевода.
 
-        # Простая сегментация по абзацам
-        for page_idx, page in enumerate(extraction_result.get("pages", [])):
-            for block_idx, block in enumerate(page.get("blocks", [])):
-                text = block.get("text", "").strip()
+        FIXED: Uses proper Segmenter.segment_document() API instead of manual segmentation.
+        This ensures placeholder encoding and proper structure handling.
 
-                if not text:
-                    continue
+        Args:
+            document: KPSDocument from extraction
 
-                segment = TranslationSegment(
-                    segment_id=f"p{page_idx}_b{block_idx}",
-                    text=text,
-                    metadata={
-                        "page": page_idx,
-                        "block": block_idx,
-                        "type": block.get("type", "text"),
-                    },
-                )
-                segments.append(segment)
-
-        return segments
+        Returns:
+            List of TranslationSegment with encoded placeholders
+        """
+        # FIXED: Use Segmenter.segment_document() which properly handles:
+        # - Placeholder encoding (preserves [[asset_id]], URLs, numbers)
+        # - Document structure validation
+        # - Segment ID generation
+        # - TranslationSegment construction (only segment_id, text, placeholders)
+        return self.segmenter.segment_document(document)
 
     def _detect_language(self, segments: List[TranslationSegment]) -> str:
         """Определить язык текста."""
