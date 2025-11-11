@@ -322,6 +322,121 @@ def export(
 
 
 @app.command()
+def glossary(
+    action: str = typer.Argument(..., help="Action: import-tbx, export-tbx"),
+    file: str = typer.Option(..., "--file", "-f", help="TBX file path"),
+    db: str = typer.Option(..., "--db", help="Database URL (postgresql://...)"),
+    src: str = typer.Option(..., "--src", help="Source language code"),
+    tgt: str = typer.Option(..., "--tgt", help="Target language code"),
+    domain: str = typer.Option("general", "--domain", "-d", help="Domain/category"),
+):
+    """
+    Glossary operations (TBX import/export).
+
+    Actions:
+        import-tbx  - Import TBX file into glossary_terms
+        export-tbx  - Export glossary_terms to TBX file
+
+    Example:
+        kps glossary import-tbx --file terms.tbx --db "postgresql://..." --src ru --tgt en
+        kps glossary export-tbx --file export.tbx --db "postgresql://..." --src ru --tgt en --domain knitting
+    """
+    from kps.interop import import_tbx_to_db, export_glossary_to_tbx
+
+    if action == "import-tbx":
+        typer.echo(f"Importing TBX from: {file}")
+        try:
+            n = import_tbx_to_db(
+                path_tbx=file,
+                db_url=db,
+                src_lang=src,
+                tgt_lang=tgt,
+                domain=domain,
+            )
+            typer.secho(f"✓ Imported {n} glossary term pairs ({src} → {tgt})", fg=typer.colors.GREEN)
+        except Exception as e:
+            typer.secho(f"✗ Import failed: {e}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+
+    elif action == "export-tbx":
+        typer.echo(f"Exporting TBX to: {file}")
+        try:
+            n = export_glossary_to_tbx(
+                db_url=db,
+                output_path=file,
+                src_lang=src,
+                tgt_lang=tgt,
+                domain=domain if domain != "general" else None,
+            )
+            typer.secho(f"✓ Exported {n} glossary term pairs to TBX", fg=typer.colors.GREEN)
+        except Exception as e:
+            typer.secho(f"✗ Export failed: {e}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+
+    else:
+        typer.secho(f"Unknown action: {action}", fg=typer.colors.RED, err=True)
+        typer.echo("Valid actions: import-tbx, export-tbx")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def memory(
+    action: str = typer.Argument(..., help="Action: import-tmx, export-tmx"),
+    file: str = typer.Option(..., "--file", "-f", help="TMX file path"),
+    db: str = typer.Option(..., "--db", help="Database URL (postgresql://...)"),
+    src: str = typer.Option(..., "--src", help="Source language code"),
+    tgt: str = typer.Option(..., "--tgt", help="Target language code"),
+    limit: Optional[int] = typer.Option(None, "--limit", help="Limit for export"),
+):
+    """
+    Translation memory operations (TMX import/export).
+
+    Actions:
+        import-tmx  - Import TMX file into translations_training
+        export-tmx  - Export translations_training to TMX file
+
+    Example:
+        kps memory import-tmx --file memory.tmx --db "postgresql://..." --src ru --tgt en
+        kps memory export-tmx --file export.tmx --db "postgresql://..." --src ru --tgt en --limit 1000
+    """
+    from kps.interop import import_tmx_to_db, export_translations_to_tmx
+
+    if action == "import-tmx":
+        typer.echo(f"Importing TMX from: {file}")
+        try:
+            n = import_tmx_to_db(
+                path_tmx=file,
+                db_url=db,
+                src_lang=src,
+                tgt_lang=tgt,
+            )
+            typer.secho(f"✓ Imported {n} translation pairs ({src} → {tgt})", fg=typer.colors.GREEN)
+        except Exception as e:
+            typer.secho(f"✗ Import failed: {e}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+
+    elif action == "export-tmx":
+        typer.echo(f"Exporting TMX to: {file}")
+        try:
+            n = export_translations_to_tmx(
+                db_url=db,
+                output_path=file,
+                src_lang=src,
+                tgt_lang=tgt,
+                limit=limit,
+            )
+            typer.secho(f"✓ Exported {n} translation pairs to TMX", fg=typer.colors.GREEN)
+        except Exception as e:
+            typer.secho(f"✗ Export failed: {e}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+
+    else:
+        typer.secho(f"Unknown action: {action}", fg=typer.colors.RED, err=True)
+        typer.echo("Valid actions: import-tmx, export-tmx")
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def version():
     """Show version information."""
     typer.echo("KPS (Knitting Pattern System) v2.0.0")
