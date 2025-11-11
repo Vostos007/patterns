@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from html import unescape
 from pathlib import Path
 from typing import Iterable, List, Optional
@@ -15,16 +14,9 @@ from docx.oxml.text.paragraph import CT_P
 from docx.table import _Cell, Table
 from docx.text.paragraph import Paragraph
 
-from kps.core.document import KPSDocument
+from kps.core.document import BlockType, KPSDocument
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ParagraphMatch:
-    paragraph: Paragraph
-    original_text: str
-    translated_text: str
 
 
 def render_docx_inplace(
@@ -138,3 +130,58 @@ def _normalize(text: str) -> str:
     text = unescape(text)
     text = text.replace("\xa0", " ")
     return " ".join(text.split())
+
+
+def build_docx_from_structure(translated_doc: KPSDocument, output_path: Path) -> Path:
+    """Create a fresh DOCX from translated blocks when original template is unavailable."""
+
+    doc = Document()
+    _clear_paragraph(doc.paragraphs[0])
+
+    for section in translated_doc.sections:
+        if section.title:
+            doc.add_heading(section.title, level=2)
+        for block in section.blocks:
+            _append_block(doc, block.block_type, block.content)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(str(output_path))
+    return output_path
+
+
+def _append_block(doc: Document, block_type: BlockType, content: str) -> None:
+    text = content or ""
+    if block_type == BlockType.HEADING:
+        doc.add_heading(text, level=3)
+    elif block_type == BlockType.LIST:
+        for line in text.splitlines():
+            if line.strip():
+                doc.add_paragraph(line.strip(), style="List Bullet")
+    elif block_type == BlockType.TABLE:
+        rows = [line.split("\t") for line in text.splitlines() if line]
+        if not rows:
+            doc.add_paragraph(text)
+            return
+        cols = max(len(row) for row in rows)
+        table = doc.add_table(rows=len(rows), cols=cols)
+        for r_idx, row in enumerate(rows):
+            for c_idx, value in enumerate(row):
+                cell = table.cell(r_idx, c_idx)
+                _clear_paragraph(cell.paragraphs[0])
+                cell.paragraphs[0].add_run(value)
+    elif block_type == BlockType.FIGURE:
+        para = doc.add_paragraph()
+        para.style = "Caption"
+        para.add_run(text)
+    else:
+        for idx, line in enumerate(text.splitlines() or [""]):
+            if idx == 0:
+                para = doc.add_paragraph()
+            else:
+                para = doc.add_paragraph()
+            para.add_run(line)
+
+
+def _clear_paragraph(paragraph: Paragraph) -> None:
+    for run in paragraph.runs:
+        run.text = ""

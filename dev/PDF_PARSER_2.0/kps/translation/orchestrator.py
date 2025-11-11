@@ -268,10 +268,16 @@ Language code:"""
         sample = " ".join([s.text for s in segments[:5]])
         source_lang = self.detect_language(sample)
 
-        # Remove source language from targets
-        target_languages = [
-            lang for lang in target_languages if lang.lower() != source_lang.lower()
-        ]
+        # Deduplicate targets while preserving order
+        seen = set()
+        deduped_targets: List[str] = []
+        for lang in target_languages:
+            key = lang.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped_targets.append(lang)
+        target_languages = deduped_targets
 
         batches = self._split_into_batches(segments, self.max_batch_size)
         translations: Dict[str, TranslationResult] = {}

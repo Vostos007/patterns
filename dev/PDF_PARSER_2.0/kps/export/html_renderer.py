@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import yaml
-from weasyprint import CSS, HTML
 
 from kps.core.document import BlockType, KPSDocument
 
@@ -52,11 +51,19 @@ def _render_block(block_type: BlockType, content: str) -> str:
         return "<table>" + "".join(table_rows) + "</table>"
     if block_type == BlockType.FIGURE:
         return f"<figure><figcaption>{safe}</figcaption></figure>"
-    return f"<p>{safe.replace('\n', '<br />')}</p>"
+    safe_breaks = safe.replace("\n", "<br />")
+    return f"<p>{safe_breaks}</p>"
 
 
 def render_pdf(html_content: str, css_path: Optional[Path], output_path: Path) -> Path:
     """Render HTML + CSS to PDF via WeasyPrint."""
+    try:
+        from weasyprint import CSS, HTML  # type: ignore
+    except Exception as exc:  # pragma: no cover - optional dependency
+        raise RuntimeError(
+            "WeasyPrint is not available. Install system dependencies: "
+            "https://doc.courtbouillon.org/weasyprint/stable/first_steps.html"
+        ) from exc
 
     stylesheets = [CSS(filename=str(css_path))] if css_path and css_path.exists() else []
     HTML(string=html_content).write_pdf(str(output_path), stylesheets=stylesheets)

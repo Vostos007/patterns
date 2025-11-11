@@ -91,8 +91,9 @@ class TranslationQAGate:
 
         total = len(segments) or 1
         pass_rate = passed / total
+        epsilon = 1e-6
         return QABatchResult(
-            passed=pass_rate >= self.min_pass_rate,
+            passed=(pass_rate + epsilon) >= self.min_pass_rate,
             findings=findings,
             pass_rate=pass_rate,
         )

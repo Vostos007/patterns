@@ -65,6 +65,13 @@ except ImportError:
     TRANSLATION_QA_AVAILABLE = False
 
 from kps.translation.term_validator import TermRule, TermValidator
+from kps.export import (
+    build_docx_from_structure,
+    render_docx_inplace,
+    render_html,
+    render_pdf,
+    load_pdf_style_map,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -110,7 +117,7 @@ class PipelineConfig:
     qa_tolerance: float = 2.0  # Допустимая погрешность (px)
 
     # Export
-    export_format: str = "idml"  # idml, json, markdown
+    export_formats: List[str] = field(default_factory=lambda: ["idml"])
     style_template: Optional[str] = None  # YAML шаблон стилей
 
 
@@ -135,7 +142,7 @@ class PipelineResult:
     translation_cost: float
 
     # Output
-    output_files: Dict[str, str]  # {lang: filepath}
+    output_files: Dict[str, Dict[str, str]]  # {lang: {format: filepath}}
 
     # Statistics
     processing_time: float  # seconds
@@ -264,7 +271,12 @@ class UnifiedPipeline:
         # Translation QA gate (fail-closed)
         self.translation_qa_gate = None
         if self.term_validator and TRANSLATION_QA_AVAILABLE:
-            self.translation_qa_gate = TranslationQAGate(self.term_validator)
+            self.translation_qa_gate = TranslationQAGate(
+                self.term_validator,
+                min_pass_rate=0.95,
+                min_len_ratio=0.3,
+                max_len_ratio=2.5,
+            )
 
         logger.debug("Translation system initialized")
 
@@ -328,6 +340,8 @@ class UnifiedPipeline:
         """Инициализация экспорта."""
         self.idml_handler = None
         self.style_manager = None
+        self.style_map_path = None
+        self._style_contract_cache = None
 
         if INDESIGN_AVAILABLE:
             self.idml_handler = IDMLHandler()
@@ -337,6 +351,12 @@ class UnifiedPipeline:
                 if template_file.exists():
                     self.style_manager = StyleManager.from_yaml(str(template_file))
                     logger.info(f"Loaded style template: {template_file}")
+                    self.style_map_path = template_file
+
+        if not self.style_map_path:
+            default_style_map = Path(__file__).resolve().parents[3] / "styles" / "style_map.yml"
+            if default_style_map.exists():
+                self.style_map_path = default_style_map
 
         logger.debug("Export system initialized")
 
@@ -403,7 +423,8 @@ class UnifiedPipeline:
 
         # STEP 3: Перевод
         logger.info("Step 3: Translating...")
-        translations = {}
+        translations: Dict[str, List[str]] = {}
+        translated_documents: Dict[str, KPSDocument] = {}
         total_cost = 0.0
         cache_hits = 0
         total_segments = len(segments)
@@ -418,6 +439,9 @@ class UnifiedPipeline:
                 )
 
                 translations[target_lang] = result.segments
+                translated_documents[target_lang] = self.segmenter.merge_segments(
+                    result.segments, document
+                )
                 total_cost += result.total_cost
                 cache_hits += result.cached_segments
                 glossary_terms_found = max(glossary_terms_found, result.terms_found)
@@ -432,13 +456,14 @@ class UnifiedPipeline:
                 continue
 
         # FIXED: Add zero division protection
-        total_operations = total_segments * len(target_languages)
+        total_operations = total_segments * max(1, len(translations))
         cache_hit_rate = cache_hits / total_operations if total_operations > 0 else 0.0
 
         # Translation QA gate
         if self.translation_qa_gate:
             logger.info("Step 3b: Translation QA gate...")
             gated_translations = {}
+            gated_documents = {}
             for target_lang, translated_segments in translations.items():
                 batch = [
                     {
@@ -462,8 +487,10 @@ class UnifiedPipeline:
                     continue
 
                 gated_translations[target_lang] = translated_segments
+                gated_documents[target_lang] = translated_documents[target_lang]
 
             translations = gated_translations
+            translated_documents = gated_documents
 
         # STEP 4: QA (опционально)
         if self.config.enable_qa and self.qa_pipeline:
@@ -477,24 +504,34 @@ class UnifiedPipeline:
 
         # STEP 5: Экспорт
         logger.info("Step 5: Exporting...")
-        output_files = {}
+        output_files: Dict[str, Dict[str, str]] = {}
+        format_list = self.config.export_formats or ["json"]
 
         for target_lang, translated_segments in translations.items():
-            output_file = output_path / f"{input_path.stem}_{target_lang}.{self.config.export_format}"
+            translated_doc = translated_documents[target_lang]
+            output_files[target_lang] = {}
 
-            try:
-                self._export_translation(
-                    translated_segments,
-                    output_file,
-                    source_language,
-                    target_lang,
-                )
-                output_files[target_lang] = str(output_file)
-                logger.info(f"Exported: {output_file.name}")
+            for fmt in format_list:
+                ext = self._extension_for_format(fmt)
+                output_file = output_path / f"{input_path.stem}_{target_lang}.{ext}"
 
-            except Exception as e:
-                errors.append(f"Export to {target_lang} failed: {e}")
-                logger.error(f"Export error ({target_lang}): {e}")
+                try:
+                    self._export_translation_for_format(
+                        fmt=fmt,
+                        translated_doc=translated_doc,
+                        translated_segments=translated_segments,
+                        output_file=output_file,
+                        source_lang=source_language,
+                        target_lang=target_lang,
+                        original_input=input_path,
+                        original_document=document,
+                    )
+                    output_files[target_lang][fmt] = str(output_file)
+                    logger.info("Exported %s for %s", fmt, target_lang)
+
+                except Exception as e:
+                    errors.append(f"Export {fmt} to {target_lang} failed: {e}")
+                    logger.error("Export error (%s/%s): %s", target_lang, fmt, e)
 
         # Сохранить память переводов
         if self.memory:
@@ -509,7 +546,7 @@ class UnifiedPipeline:
             extraction_method=self.config.extraction_method.value,
             pages_extracted=pages_extracted,
             segments_extracted=len(segments),
-            target_languages=target_languages,
+            target_languages=list(translations.keys()),
             segments_translated=len(segments) * len(translations),
             cache_hit_rate=cache_hit_rate,
             glossary_terms_found=glossary_terms_found,
@@ -593,22 +630,84 @@ class UnifiedPipeline:
         sample = " ".join([s.text for s in segments[:5]])
         return self.orchestrator.detect_language(sample)
 
-    def _export_translation(
+    def _extension_for_format(self, fmt: str) -> str:
+        mapping = {
+            "docx": "docx",
+            "pdf": "pdf",
+            "markdown": "md",
+            "md": "md",
+            "json": "json",
+            "idml": "idml",
+        }
+        return mapping.get(fmt.lower(), fmt.lower())
+
+    def _export_translation_for_format(
         self,
+        fmt: str,
+        translated_doc: KPSDocument,
         translated_segments: List[str],
         output_file: Path,
         source_lang: str,
         target_lang: str,
-    ):
-        """Экспортировать перевод в файл."""
-        if self.config.export_format == "idml" and self.idml_handler:
-            # TODO: Implement IDML export
-            logger.warning("IDML export not yet implemented, using JSON")
-            self._export_json(translated_segments, output_file.with_suffix(".json"))
-        elif self.config.export_format == "markdown":
+        original_input: Path,
+        original_document: KPSDocument,
+    ) -> None:
+        fmt_lower = fmt.lower()
+
+        if fmt_lower == "docx":
+            if original_input.suffix.lower() == ".docx" and original_input.exists():
+                render_docx_inplace(
+                    original_input,
+                    original_document,
+                    translated_doc,
+                    output_file,
+                )
+            else:
+                logger.warning(
+                    "DOCX export fallback: source is %s, generating document from structure",
+                    original_input.suffix or "unknown",
+                )
+                build_docx_from_structure(translated_doc, output_file)
+            return
+
+        if fmt_lower == "pdf":
+            html_content = render_html(translated_doc)
+            css_path = self._resolve_pdf_css()
+            render_pdf(html_content, css_path, output_file)
+            return
+
+        if fmt_lower in {"markdown", "md"}:
             self._export_markdown(translated_segments, output_file)
-        else:  # JSON
+            return
+
+        if fmt_lower == "json":
             self._export_json(translated_segments, output_file)
+            return
+
+        if fmt_lower == "idml" and self.idml_handler:
+            logger.warning("IDML export not implemented yet; emitting JSON snapshot")
+            self._export_json(translated_segments, output_file.with_suffix(".json"))
+            return
+
+        raise ValueError(f"Unsupported export format: {fmt}")
+
+    def _resolve_pdf_css(self) -> Optional[Path]:
+        if not self.style_map_path or not self.style_map_path.exists():
+            return None
+        if self._style_contract_cache is None:
+            try:
+                self._style_contract_cache = load_pdf_style_map(self.style_map_path)
+            except Exception as exc:
+                logger.warning("Failed to load style map %s: %s", self.style_map_path, exc)
+                self._style_contract_cache = {}
+        pdf_cfg = (self._style_contract_cache or {}).get("pdf", {})
+        css_rel = pdf_cfg.get("css")
+        if css_rel:
+            candidate = (self.style_map_path.parent / css_rel).resolve()
+            if candidate.exists():
+                return candidate
+        default_css = self.style_map_path.parent / "pdf.css"
+        return default_css if default_css.exists() else None
 
     def _export_json(self, segments: List[str], output_file: Path):
         """Экспорт в JSON."""

@@ -43,8 +43,9 @@ def simple_example():
     print(f"  Время: {result.processing_time:.1f}s")
 
     print(f"\nВыходные файлы:")
-    for lang, filepath in result.output_files.items():
-        print(f"  {lang}: {filepath}")
+    for lang, files in result.output_files.items():
+        for fmt, filepath in files.items():
+            print(f"  {lang} [{fmt}]: {filepath}")
 
 
 def configured_example():
@@ -67,7 +68,7 @@ def configured_example():
         # QA
         enable_qa=False,  # Пока отключено
         # Экспорт
-        export_format="json",
+        export_formats=["json"],
         style_template="templates/indesign/master-template-styles.yaml",
     )
 

@@ -22,7 +22,12 @@ def translate(
     input_file: str = typer.Argument(..., help="Input document (PDF, DOCX)"),
     languages: str = typer.Option("en,fr", "--lang", "-l", help="Target languages (comma-separated)"),
     output_dir: str = typer.Option("output", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("idml", "--format", "-f", help="Export format (idml, pdf, docx, markdown)"),
+    formats: str = typer.Option(
+        "docx,pdf,json",
+        "--format",
+        "-f",
+        help="Comma-separated export formats (docx,pdf,markdown,json,idml)",
+    ),
     glossary: Optional[str] = typer.Option(None, "--glossary", "-g", help="Glossary file path"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
@@ -46,14 +51,17 @@ def translate(
     typer.echo(f"Output: {output_dir}")
 
     # Parse languages
-    target_langs = [lang.strip() for lang in languages.split(",")]
+    target_langs = [lang.strip() for lang in languages.split(",") if lang.strip()]
+    export_formats = [fmt.strip() for fmt in formats.split(",") if fmt.strip()]
+    if not export_formats:
+        export_formats = ["docx"]
 
     # Create config
     config = PipelineConfig(
         extraction_method=ExtractionMethod.AUTO,
         memory_type=MemoryType.SEMANTIC,
         glossary_path=glossary or "glossary.yaml",
-        export_format=format,
+        export_formats=export_formats,
     )
 
     # Create pipeline
@@ -78,8 +86,9 @@ def translate(
 
         if result.output_files:
             typer.echo("\nOutput files:")
-            for lang, filepath in result.output_files.items():
-                typer.echo(f"  {lang}: {filepath}")
+            for lang, files in result.output_files.items():
+                for fmt, filepath in files.items():
+                    typer.echo(f"  {lang} [{fmt}]: {filepath}")
 
         if result.errors:
             typer.echo("\nErrors:")
