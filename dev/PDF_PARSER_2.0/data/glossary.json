@@ -1,0 +1,733 @@
+{
+    "meta": {
+      "title": "RU–EN–FR Knitting & Crochet Glossary (Extended)",
+      "created": "2025-11-05",
+      "version": "2.0",
+      "source_language": "ru",
+      "target_languages": ["en", "fr"],
+      "conventions": {
+        "knitting_abbrev_style_en": "Common US/International knitting abbreviations (k, p, yo, k2tog, ssk, BO, CO, RS/WS).",
+        "crochet_terms_en": "US crochet terms (sc, hdc, dc, tr); UK equivalents noted where relevant.",
+        "french_style": "Contemporary FR usage from major publishers (end, env, m, rg/tour, jeté, surjet simple, 2 m ens end).",
+        "units": "Convert см→cm, мм→mm, г→g, м→m; preserve numerals, ×, %, (), [], {}, *, ** in patterns.",
+        "notes": "Chart symbols vary by publisher—follow the legend; protected tokens must remain unchanged in translation."
+      },
+      "schema_fields": ["ru", "en", "fr", "category", "note", "protected_tokens"],
+      "categories": [
+        "abbrev/count",
+        "unit",
+        "notation",
+        "stitch",
+        "decrease",
+        "increase",
+        "fabric",
+        "crochet/stitch",
+        "stitch/manipulation",
+        "stitch/context",
+        "crochet/context",
+        "crochet/space",
+        "crochet/edging",
+        "tool",
+        "technique",
+        "construction",
+        "notion",
+        "chart_symbol",
+        "orientation",
+        "finishing",
+        "measurement",
+        "yarn",
+        "care",
+        "category"
+      ]
+    },
+    "entries": [
+      {
+        "ru": "тройная убавка (т.уб.)",
+        "en": "triple decrease (s3kp / ssk2tog / CtrDD)",
+        "fr": "diminution triple centrée (glisser 3 m ens à l'endroit)",
+        "category": "decrease",
+        "note": "Slip 3 as k2tog, knit 1, pass 3 slipped sts over. Also: s3kp = slip, slip, slip, knit.",
+        "protected_tokens": ["s3kp", "ssk2tog", "CtrDD", "CTDD"]
+      },
+      {
+        "ru": "провязать 3 петли вместе (ПВ3)",
+        "en": "knit 3 together (k3tog)",
+        "fr": "tricoter 3 mailles ensemble (3end-ens)",
+        "category": "decrease",
+        "note": "Right-leaning triple decrease; 2 stitches decreased.",
+        "protected_tokens": ["k3tog"]
+      },
+      {
+        "ru": "убавка на скрещивании",
+        "en": "brioche decrease (brk3tog / br-sssk)",
+        "fr": "diminution en brioche",
+        "category": "decrease",
+        "note": "Involved brioche rib decreases with yarn overs.",
+        "protected_tokens": ["brk3tog", "br-sssk"]
+      },
+      {
+        "ru": "полная убавка",
+        "en": "double decrease (DD / ddd)",
+        "fr": "double diminution (DD)",
+        "category": "decrease",
+        "note": "2 stitches decreased; slip 1 k1 psso is one common method.",
+        "protected_tokens": ["DD", "ddd"]
+      },
+      {
+        "ru": "накид с поворотом",
+        "en": "twisted yarn over (yo twisted / close the hole)",
+        "fr": "jeté torse (fermer le trou)",
+        "category": "increase",
+        "note": "Yarn over twisted to prevent eyelet; tighten on next row.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "двойной накид (ДН2)",
+        "en": "double yarn over (yo2 / double yo)",
+        "fr": "double jeté (2 jeté)",
+        "category": "increase",
+        "note": "Two yarn overs in succession; creates 2 new stitches and 2 eyelets.",
+        "protected_tokens": ["yo2", "2yo"]
+      },
+      {
+        "ru": "прибавка из смежной петли (протяжка сверху)",
+        "en": "lifted increase (LLI/RLI / loop raised increase)",
+        "fr": "augmentation levée (maille prélevée)",
+        "category": "increase",
+        "note": "Worked into the stitch one row below; creates a clean line.",
+        "protected_tokens": ["LLI", "RLI"]
+      },
+      {
+        "ru": "прибавка с перекрещиванием влево",
+        "en": "make 1 left twisted (M1L tbl)",
+        "fr": "augmentation levée gauche torse (M1L torse)",
+        "category": "increase",
+        "note": "Lifted increase twisted to tighten the new stitch.",
+        "protected_tokens": ["M1L tbl", "M1L-tbl"]
+      },
+      {
+        "ru": "кружево / кружевное вязание",
+        "en": "lace / lace knitting",
+        "fr": "dentelle / point de dentelle",
+        "category": "fabric",
+        "note": "Openwork pattern with yarn overs; minimum 1 st between yo.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "люверс (маленький люверс)",
+        "en": "eyelet",
+        "fr": "illet / petit illet",
+        "category": "fabric",
+        "note": "Small hole in fabric; yo paired with decrease. Min 2 sts between.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "люверс увеличенный",
+        "en": "large eyelet",
+        "fr": "grand illet",
+        "category": "fabric",
+        "note": "Larger hole created by bigger yo or multiple yo together.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "точечное кружево (кружево с промежутками)",
+        "en": "knitted lace",
+        "fr": "dentelle tricotée",
+        "category": "fabric",
+        "note": "Lace with all knit or all purl rows on wrong side; pattern only RS.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "цветочный люверс / мотив люверса",
+        "en": "eyelet motif / eyelet pattern",
+        "fr": "motif illet / point illet",
+        "category": "fabric",
+        "note": "Arrangement of eyelets to form decorative design.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "кружевной набор / кружевной край",
+        "en": "lace cast-on / lace edge",
+        "fr": "chaîne de dentelle / bordure de dentelle",
+        "category": "construction",
+        "note": "Decorative openwork starting edge.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "жаккард / жаккардовое вязание",
+        "en": "jacquard / jacquard knitting",
+        "fr": "jacquard / tricot jacquard",
+        "category": "technique",
+        "note": "Color pattern knitting; can include floats on wrong side.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "фарейл / многоцветное в ряд",
+        "en": "Fair Isle / Fair Isle knitting",
+        "fr": "tricot jacquard / Jersey jacquard",
+        "category": "technique",
+        "note": "Stranded color knitting with up to 2 colors per row.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "интарсия",
+        "en": "intarsia",
+        "fr": "intarsia",
+        "category": "technique",
+        "note": "Color-blocking technique; each color has separate bobbins, no floats.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "протяжка / плавающая нить",
+        "en": "float",
+        "fr": "float / fil flottant",
+        "category": "technique",
+        "note": "Unused yarn carried across back in stranded knitting.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "ловля протяжки",
+        "en": "catch the float / trap the float",
+        "fr": "attraper le float / capturer le float",
+        "category": "technique",
+        "note": "Method to secure long floats by knitting them into stitches.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "лестничный жаккард / лестница",
+        "en": "ladder back jacquard / ladder stitch (in jacquard)",
+        "fr": "jacquard échelle inversée / point échelle",
+        "category": "technique",
+        "note": "Technique turning long floats into ladder columns for elasticity.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "двойное вязание",
+        "en": "double knitting",
+        "fr": "double tricot / jacquard double",
+        "category": "technique",
+        "note": "Two-color technique working two stitches per color; no floats.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "коса / кабель / жгут",
+        "en": "cable / twist",
+        "fr": "torsade / câble / croisé",
+        "category": "stitch",
+        "note": "Cross stitches over each other using cable needle or without.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "коса на 2 петли влево (К2ПВ)",
+        "en": "cable 2 front (C2F / 2/2 LC)",
+        "fr": "torsade 2 devant (T2dev)",
+        "category": "stitch",
+        "note": "Slip 2 to CN, hold front, k2, k2 from CN. Left-leaning cable.",
+        "protected_tokens": ["C2F", "2/2 LC", "T2dev"]
+      },
+      {
+        "ru": "коса на 2 петли вправо (К2ПП)",
+        "en": "cable 2 back (C2B / 2/2 RC)",
+        "fr": "torsade 2 derrière (T2der)",
+        "category": "stitch",
+        "note": "Slip 2 to CN, hold back, k2, k2 from CN. Right-leaning cable.",
+        "protected_tokens": ["C2B", "2/2 RC", "T2der"]
+      },
+      {
+        "ru": "коса на 3 петли (К3ПВ/К3ПП)",
+        "en": "cable 3 (C3F / C3B / 3/2 or 2/3 cable)",
+        "fr": "torsade 3 (T3dev / T3der)",
+        "category": "stitch",
+        "note": "Asymmetric cable; slip different number of sts to CN.",
+        "protected_tokens": ["C3F", "C3B"]
+      },
+      {
+        "ru": "коса без вспомогательной спицы",
+        "en": "cable without cable needle / mock cable",
+        "fr": "torsade sans aiguille auxiliaire",
+        "category": "technique",
+        "note": "Cable worked by slipping sts directly and re-inserting LN.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "скрещивание вправо (ПК2)",
+        "en": "right twist (RT / right-leaning twist / k2tog tbl leave)",
+        "fr": "croisé droit (CR)",
+        "category": "stitch",
+        "note": "Knit 2 together through back loop, return to LN, knit first.",
+        "protected_tokens": ["RT"]
+      },
+      {
+        "ru": "скрещивание влево (ЛК2)",
+        "en": "left twist (LT / left-leaning twist)",
+        "fr": "croisé gauche (CG)",
+        "category": "stitch",
+        "note": "Skip 1 st, knit next st tbl, knit skipped st, slip both.",
+        "protected_tokens": ["LT"]
+      },
+      {
+        "ru": "бобл / помпон / шарик",
+        "en": "bobble",
+        "fr": "pompon / boule",
+        "category": "stitch",
+        "note": "Make 3–5 sts into 1; work these several rows, pass extra over.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "пуф / пышный столбик (крючок)",
+        "en": "puff stitch (crochet)",
+        "fr": "point puff / point bouffant",
+        "category": "crochet/stitch",
+        "note": "Multiple yarn-overs and draw-throughs; creates puffy texture.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "попкорн (крючок)",
+        "en": "popcorn stitch (crochet) / pop",
+        "fr": "point pop-corn",
+        "category": "crochet/stitch",
+        "note": "5+ DC into same st, drop loop, reinsert in first DC, pull through.",
+        "protected_tokens": ["pc", "pop"]
+      },
+      {
+        "ru": "кластер (крючок)",
+        "en": "cluster (crochet)",
+        "fr": "point groupe / cluster",
+        "category": "crochet/stitch",
+        "note": "Multiple stitches decreased or grouped together.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "раковина (крючок)",
+        "en": "shell stitch (crochet)",
+        "fr": "point coquille / shell",
+        "category": "crochet/stitch",
+        "note": "3–5 DC (or other tall st) worked into same st or ch-sp.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "V-образный столбик (крючок)",
+        "en": "V-stitch (crochet) / V-st",
+        "fr": "point V (dc, ch, dc dans même maille)",
+        "category": "crochet/stitch",
+        "note": "(DC, ch, DC) into same stitch creates V shape.",
+        "protected_tokens": ["V-st"]
+      },
+      {
+        "ru": "пико (крючок, кружево)",
+        "en": "picot",
+        "fr": "picot",
+        "category": "crochet/edging",
+        "note": "Small decorative loop; chain and slip stitch variation.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "резинка 1х1 / резинка поларная",
+        "en": "ribbing 1x1 / single rib",
+        "fr": "côtes 1/1 / côtes simples",
+        "category": "fabric",
+        "note": "Alternating knit and purl; very elastic.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "резинка 2х2 / двойная резинка",
+        "en": "ribbing 2x2 / double rib",
+        "fr": "côtes 2/2 / côtes doubles",
+        "category": "fabric",
+        "note": "2 knit, 2 purl repeat.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "бриошь / бриошь вязание",
+        "en": "brioche / brioche knitting / brioche rib",
+        "fr": "brioche / tricot brioche",
+        "category": "fabric",
+        "note": "Knit st + yarn over combined; creates vertical ridges.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "двухцветная бриошь",
+        "en": "two-color brioche",
+        "fr": "brioche bicolore",
+        "category": "fabric",
+        "note": "Brioche in alternating colors for extra texture.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "вязка трубчатая / полая вязка",
+        "en": "tubular cast-on / tubular bind-off / hollow knitting",
+        "fr": "tricoter tubulaire / chaîne tubulaire",
+        "category": "technique",
+        "note": "Creates a tube that can be reversed; often used for hems.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "гофре / гофрированная вязка",
+        "en": "pleated knitting / fluted knitting",
+        "fr": "tricot plissé / point cannelé",
+        "category": "fabric",
+        "note": "Folded ridges created by slipping and purling patterns.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "накид между лицевой и изнаночной",
+        "en": "yarn over between knit and purl (yo bet K and P)",
+        "fr": "jeté entre endroit et envers",
+        "category": "stitch/context",
+        "note": "YO path depends on stitch order; can make larger eyelets.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "накид перед лицевой",
+        "en": "yarn forward round needle (yrn / yfwd / yon)",
+        "fr": "jeté avant endroit",
+        "category": "stitch/context",
+        "note": "Alternative abbreviations for yarn over in older UK patterns.",
+        "protected_tokens": ["yrn", "yfwd", "yon", "yfrn"]
+      },
+      {
+        "ru": "маленький накид",
+        "en": "small yarn over (yo closed)",
+        "fr": "petit jeté",
+        "category": "stitch",
+        "note": "Worked specially to minimize hole; tighten next row.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "съёмный набор / временный набор",
+        "en": "provisional cast-on",
+        "fr": "chaîne provisoire",
+        "category": "technique",
+        "note": "Live sts held; removed later to knit from both directions.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "набор крючком (съёмный)",
+        "en": "crochet provisional cast-on",
+        "fr": "chaîne de crochet provisoire",
+        "category": "technique",
+        "note": "Uses crochet chain; pick up sts after removing chain.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "гибкий набор",
+        "en": "flexible long-tail cast-on / flexible cast-on",
+        "fr": "chaîne flexible / chaîne élastique",
+        "category": "technique",
+        "note": "Variation of long-tail that yields stretchier edge.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "набор с шапочкой / итальянский набор",
+        "en": "Italian cast-on / tubular cast-on",
+        "fr": "chaîne italienne / chaîne tubulaire",
+        "category": "technique",
+        "note": "Creates very neat, stretchy edge; pairs with Italian BO.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "красивое закрытие / итальянское закрытие",
+        "en": "Italian bind off / Kitchener bind off (K1P1 BO)",
+        "fr": "chaîne fermée italienne / fermeture italienne",
+        "category": "technique",
+        "note": "Sewn grafting for rib; professional-looking closed edge.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "гибкое закрытие",
+        "en": "jssbo (Jenny's surprisingly stretchy bind-off)",
+        "fr": "fermeture flexible",
+        "category": "technique",
+        "note": "Very stretchy bind-off using yarn-overs and decreases.",
+        "protected_tokens": ["jssbo"]
+      },
+      {
+        "ru": "одиночное закрытие (по спирали)",
+        "en": "single decrease bind-off / decrease bind-off (no cable needle)",
+        "fr": "fermeture par diminution",
+        "category": "technique",
+        "note": "Simple pass-slipped-st-over method row by row.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "окат рукава / убавки оката",
+        "en": "armhole shaping / cap shaping",
+        "fr": "emmanchure / ocastage",
+        "category": "construction",
+        "note": "Bind-offs and decreases at armhole for cap fit.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "убавки вытачками (грудь)",
+        "en": "dart shaping / short-row bust darts",
+        "fr": "pinces (poitrine) / vagues courtes poitrine",
+        "category": "construction",
+        "note": "Short rows or decreases to shape bust area.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "вязание с наклоном",
+        "en": "bias knitting / bias shaping",
+        "fr": "tricot biais",
+        "category": "technique",
+        "note": "Slanted stitches from asymmetric inc/dec alignment.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "вытачка",
+        "en": "dart / tuck",
+        "fr": "pince",
+        "category": "construction",
+        "note": "Pinch or fold in fabric for shaping; sewn or knitted.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "гусеничка / ластовица (большого пальца)",
+        "en": "gusset (thumb / glove gusset)",
+        "fr": "gousset (du pouce / mitaine)",
+        "category": "construction",
+        "note": "Triangular or trapezoidal insert for better fit.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "схема / диаграмма / чарт",
+        "en": "chart / symbol chart",
+        "fr": "grille / diagramme",
+        "category": "notation",
+        "note": "Graphical representation of pattern using symbols.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "повтор узора / раппорт",
+        "en": "repeat / stitch repeat",
+        "fr": "répétition / rapport",
+        "category": "notation",
+        "note": "Pattern unit that repeats across rows or within sections.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "лицевой ряд / лицевая сторона работы",
+        "en": "right side row (RS) / public side",
+        "fr": "rang endroit / côté endroit (côté public)",
+        "category": "orientation",
+        "note": "Side of fabric that shows finished design (typically odd rows).",
+        "protected_tokens": ["RS"]
+      },
+      {
+        "ru": "изнаночный ряд / изнаночная сторона работы",
+        "en": "wrong side row (WS) / private side",
+        "fr": "rang envers / côté envers (côté privé)",
+        "category": "orientation",
+        "note": "Side of fabric that is inside/hidden (typically even rows).",
+        "protected_tokens": ["WS"]
+      },
+      {
+        "ru": "прямое направление / туда-обратно",
+        "en": "flat knitting / knitting back and forth",
+        "fr": "tricot plat / allers-retours",
+        "category": "technique",
+        "note": "Knitting on two needles, turning after each row.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "круговое вязание / по кругу",
+        "en": "knitting in the round / circular knitting",
+        "fr": "tricot en rond",
+        "category": "technique",
+        "note": "Continuous spiral on circular needle or DPNs; no WS rows.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "блокировка / парообработка",
+        "en": "blocking / steam blocking / wet blocking",
+        "fr": "bloquer / bloquage",
+        "category": "finishing",
+        "note": "Wetting, shaping, and drying to even out fabric and size.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "машинная стирка",
+        "en": "machine wash / machine washable",
+        "fr": "lavage machine",
+        "category": "care",
+        "note": "Yarn and garment suitable for washing machine.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "ручная стирка",
+        "en": "hand wash / hand washable",
+        "fr": "lavage main",
+        "category": "care",
+        "note": "Gentle cleaning by hand in cool water.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "вязание / сшивание швов",
+        "en": "seaming / grafting / sewing seams",
+        "fr": "couture / assemblage",
+        "category": "finishing",
+        "note": "Joining pieces together with matching yarn.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "трикотажный шов / шов \"назад иголка\"",
+        "en": "backstitch seam / woven seam",
+        "fr": "couture dos-à-dos / point arrière",
+        "category": "finishing",
+        "note": "Common seaming method for knit pieces.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "матрасный шов / вязаный шов",
+        "en": "mattress stitch / ladder stitch (seaming)",
+        "fr": "couture invisible / couture chaîne",
+        "category": "finishing",
+        "note": "Nearly invisible seam joining stockinette sides.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "шов Китченера / трикотажный шов",
+        "en": "Kitchener stitch / grafting",
+        "fr": "couture Kitchener / point de chaînette",
+        "category": "finishing",
+        "note": "Sewn graft joining two sets of live stockinette stitches.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "пришивание пуговиц",
+        "en": "attaching buttons / sewing buttons",
+        "fr": "coudre boutons",
+        "category": "finishing",
+        "note": "Securing buttons to band or band to garment.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "плетение нити в ткань",
+        "en": "weaving in ends / end management",
+        "fr": "rentrer fils / rentrer les extrémités",
+        "category": "finishing",
+        "note": "Thread loose yarn tails into fabric with tapestry needle.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "фундамент (основание ряд)",
+        "en": "foundation stitch (fsc / fdc / foundation chain)",
+        "fr": "maille de fondation / base",
+        "category": "crochet/start",
+        "note": "Chain and first row worked in one, eliminates separate CO.",
+        "protected_tokens": ["fsc", "fdc"]
+      },
+      {
+        "ru": "поворотные цепи",
+        "en": "turning chain(s)",
+        "fr": "chaîne(s) de retour",
+        "category": "crochet/technique",
+        "note": "Ch worked at end of row to reach height for next row.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "передняя петля / задняя петля",
+        "en": "front loop only (flo) / back loop only (blo)",
+        "fr": "brin avant (ba) / brin arrière (br)",
+        "category": "crochet/context",
+        "note": "Work into one loop instead of under both loops.",
+        "protected_tokens": ["flo", "blo", "ba", "br"]
+      },
+      {
+        "ru": "убавка в крючке / провязать вместе",
+        "en": "decrease crochet (dec / sk)",
+        "fr": "diminution crochet / passer",
+        "category": "crochet/technique",
+        "note": "2 stitches worked together as one; may vary by stitch height.",
+        "protected_tokens": ["sk"]
+      },
+      {
+        "ru": "прибавка в крючке",
+        "en": "increase crochet (inc / work multiple into same st)",
+        "fr": "augmentation crochet",
+        "category": "crochet/technique",
+        "note": "Multiple stitches worked into one stitch.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "вертикальные полосы",
+        "en": "vertical stripes / post stitch",
+        "fr": "rayures verticales / point de poteau",
+        "category": "crochet/technique",
+        "note": "Crocheting into post of stitch below to create vertical color.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "плотность вязания / калибр",
+        "en": "gauge / tension",
+        "fr": "tension (jaugeage)",
+        "category": "measurement",
+        "note": "Number of stitches/rows per inch; critical for fit.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "образец / образец для проверки",
+        "en": "gauge swatch / test swatch / tension swatch",
+        "fr": "échantillon de tension",
+        "category": "measurement",
+        "note": "Practice piece to verify stitch and row gauge before starting.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "размер спиц / размер крючка (номер)",
+        "en": "needle size (US / metric) / hook size",
+        "fr": "numéro d'aiguille / numéro crochet",
+        "category": "notation",
+        "note": "Tool sizing (e.g., US 6 = 4 mm); affects gauge.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "допуск на усадку",
+        "en": "allowance for shrinkage",
+        "fr": "allocation rétrécissement",
+        "category": "measurement",
+        "note": "Extra ease added to finished measurements for washing/wear.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "однородная пряжа / гладкая пряжа",
+        "en": "smooth yarn / single-ply yarn",
+        "fr": "fil lisse / fil simple",
+        "category": "yarn",
+        "note": "Yarn without texture or texture is even.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "люрекс / металлическая нить",
+        "en": "lurex / metallic yarn",
+        "fr": "lurex / fil métallique",
+        "category": "yarn",
+        "note": "Yarn with shiny metallic strands for glitter effect.",
+        "protected_tokens": []
+      },
+      {
+        "ru": "× или Х (крест, перекрещивание)",
+        "en": "× / X (cable / cross stitch)",
+        "fr": "× / X (croisé / torsade)",
+        "category": "chart_symbol",
+        "note": "Chart symbol for cable or twist stitch; verify legend.",
+        "protected_tokens": ["×", "X"]
+      },
+      {
+        "ru": "^ (крыша, вершина двойная убавка)",
+        "en": "^ (caret / centered double decrease)",
+        "fr": "^ (toit / diminution centrée double)",
+        "category": "chart_symbol",
+        "note": "Chart symbol for CDD; centered decrease.",
+        "protected_tokens": ["^"]
+      },
+      {
+        "ru": "◇ (ромб, люверс)",
+        "en": "◇ (diamond / eyelet motif)",
+        "fr": "◇ (losange / motif illet)",
+        "category": "chart_symbol",
+        "note": "Symbol group representing eyelet or lace motif.",
+        "protected_tokens": ["◇"]
+      }
+    ]
+  }

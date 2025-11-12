@@ -48,6 +48,12 @@ result = pipeline.process("pattern.pdf", target_languages=["en", "fr"])
 
 📖 **Подробнее:** [QUICKSTART.md](./QUICKSTART.md)
 
+> 🔄 **Синхронизация глоссария**
+>
+> 1. Обновите `/Users/vostos/Dev/Hollywool patterns/глоссарий.json` (или `dev/PDF_PARSER_2.0/data/glossary.json`).
+> 2. Запустите `dev/PDF_PARSER_2.0/.venv/bin/python scripts/sync_glossary.py` — скрипт обновит `config/glossaries/knitting_custom.yaml`.
+> 3. Коммитьте и JSON, и YAML. UnifiedPipeline автоматически подхватит свежий YAML.
+
 ---
 
 ## ⚡ Ключевые возможности
