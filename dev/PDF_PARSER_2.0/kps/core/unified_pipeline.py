@@ -113,7 +113,7 @@ class PipelineConfig:
     # Translation
     memory_type: MemoryType = MemoryType.SEMANTIC
     memory_path: Optional[str] = "data/translation_memory.db"
-    glossary_path: Optional[str] = "glossary.yaml"
+    glossary_path: Optional[str] = "config/glossaries/knitting_custom.yaml"
     enable_few_shot: bool = True
     enable_auto_suggestions: bool = True
 
@@ -222,9 +222,22 @@ class UnifiedPipeline:
         self.glossary = GlossaryManager()
         if self.config.glossary_path:
             glossary_file = Path(self.config.glossary_path)
+            if not glossary_file.is_absolute():
+                project_root = Path(__file__).resolve().parents[2]
+                glossary_file = project_root / glossary_file
+
             if glossary_file.exists():
                 self.glossary.load_from_yaml(str(glossary_file))
-                logger.info(f"Loaded {len(self.glossary.get_all_entries())} glossary terms")
+                logger.info(
+                    "Loaded %s glossary terms from %s",
+                    len(self.glossary.get_all_entries()),
+                    glossary_file,
+                )
+            else:
+                logger.warning(
+                    "Glossary file %s not found. Run scripts/sync_glossary.py to generate it.",
+                    glossary_file,
+                )
 
         # Term validator from glossary entries
         self.term_validator = self._build_term_validator()
@@ -727,8 +740,8 @@ class UnifiedPipeline:
                     return
                 except Exception as exc:  # pragma: no cover - defensive
                     logger.warning(
-                        "Structured DOCX export failed, falling back to template mutation: %s",
-                        exc,
+                        "Structured DOCX export failed, falling back to template mutation",
+                        exc_info=exc,
                     )
             if original_input.suffix.lower() == ".docx" and original_input.exists():
                 render_docx_inplace(

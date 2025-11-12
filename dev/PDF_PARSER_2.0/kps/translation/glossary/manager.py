@@ -78,29 +78,45 @@ class GlossaryManager:
     def _load_glossaries(self) -> None:
         """Load all glossary YAML files."""
         for path in self.glossary_paths:
-            if not path.exists():
+            self._load_glossary_file(path)
+
+    def _load_glossary_file(self, path: Path) -> None:
+        if not path.exists():
+            return
+
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+
+        self._ingest_entries(data)
+
+    def _ingest_entries(self, data: Dict) -> None:
+        for category, entries_dict in data.items():
+            if category == "metadata" or not isinstance(entries_dict, dict):
                 continue
 
-            with open(path, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+            normalized_category = (
+                category.rstrip("s")
+                if category in {"abbreviations", "terms", "units"}
+                else category
+            )
 
-            # Load entries from each category
-            for category in ["abbreviations", "terms", "units"]:
-                entries_dict = data.get(category, {})
-                for key, values in entries_dict.items():
-                    entry = GlossaryEntry(
-                        key=key,
-                        ru=values.get("ru", ""),
-                        en=values.get("en", ""),
-                        fr=values.get("fr", ""),
-                        category=category.rstrip("s"),  # "abbreviations" → "abbreviation"
-                        description=values.get("description"),
-                        protected_tokens=values.get("protected_tokens", []),
-                    )
-                    self.entries.append(entry)
+            for key, values in entries_dict.items():
+                entry = GlossaryEntry(
+                    key=key,
+                    ru=values.get("ru", ""),
+                    en=values.get("en", ""),
+                    fr=values.get("fr", ""),
+                    category=normalized_category,
+                    description=values.get("description") or values.get("note"),
+                    protected_tokens=values.get("protected_tokens", []),
+                )
+                self.entries.append(entry)
+                self.protected_tokens.update(entry.protected_tokens)
 
-                    # Collect protected tokens
-                    self.protected_tokens.update(entry.protected_tokens)
+    def load_from_yaml(self, path: str) -> None:
+        """Load an additional glossary YAML file at runtime."""
+        self._load_glossary_file(Path(path))
+        self._build_indices()
 
     def _build_indices(self) -> None:
         """Build lookup indices for fast access by language and category."""
