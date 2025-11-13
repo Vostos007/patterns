@@ -10,6 +10,10 @@ from typing import List, Optional
 
 import typer
 
+from kps.io.layout import IOLayout
+
+SUPPORTED_LAYOUT_LANGS = {"ru", "en", "fr"}
+
 app = typer.Typer(
     name="kps",
     help="Knitting Pattern System - Document processing and translation",
@@ -21,15 +25,28 @@ app = typer.Typer(
 def translate(
     input_file: str = typer.Argument(..., help="Input document (PDF, DOCX)"),
     languages: str = typer.Option("en,fr", "--lang", "-l", help="Target languages (comma-separated)"),
-    output_dir: str = typer.Option("output", "--output", "-o", help="Output directory"),
+    root_dir: Optional[str] = typer.Option(
+        None,
+        "--root",
+        "-r",
+        help="Base directory containing input/inter/output structure",
+        show_default=False,
+    ),
+    use_tmp: bool = typer.Option(False, "--tmp", help="Route outputs into an isolated tmp layout"),
     formats: str = typer.Option(
-        "docx,pdf,json",
+        "docx,pdf,json,markdown",
         "--format",
         "-f",
         help="Comma-separated export formats (docx,pdf,markdown,json,idml)",
     ),
+    skip_translation_qa: bool = typer.Option(False, "--skip-translation-qa", help="Bypass translation QA gate"),
     glossary: Optional[str] = typer.Option(None, "--glossary", "-g", help="Glossary file path"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    layout_preserve: bool = typer.Option(
+        False,
+        "--layout-preserve",
+        help="Overlay translations onto original PDF to preserve layout (ru/en/fr only)",
+    ),
 ):
     """
     Translate a document to target languages.
@@ -46,15 +63,19 @@ def translate(
 
     from kps.core import PipelineConfig, UnifiedPipeline, ExtractionMethod, MemoryType
 
+    project_root = Path(__file__).resolve().parents[1]
+    default_root = (project_root / "runtime").resolve()
+    layout_root = Path(root_dir).expanduser().resolve() if root_dir else default_root
+
     typer.echo(f"Processing: {input_file}")
     typer.echo(f"Languages: {languages}")
-    typer.echo(f"Output: {output_dir}")
+    typer.echo(f"Root: {layout_root}{' (tmp run)' if use_tmp else ''}")
 
     # Parse languages
     target_langs = [lang.strip() for lang in languages.split(",") if lang.strip()]
     export_formats = [fmt.strip() for fmt in formats.split(",") if fmt.strip()]
     if not export_formats:
-        export_formats = ["docx"]
+        export_formats = ["docx", "pdf", "json", "markdown"]
 
     # Create config
     config = PipelineConfig(
@@ -64,15 +85,20 @@ def translate(
         export_formats=export_formats,
     )
 
-    # Create pipeline
+    # Create pipeline and layout context
     pipeline = UnifiedPipeline(config)
+    if skip_translation_qa:
+        pipeline.translation_qa_gate = None
+    layout = IOLayout(base_root=layout_root, use_tmp=use_tmp)
+    run_context = layout.prepare_run(Path(input_file))
 
     # Process
     try:
         result = pipeline.process(
-            input_file=Path(input_file),
+            input_file=run_context.staged_input,
             target_languages=target_langs,
-            output_dir=Path(output_dir),
+            output_dir=run_context.output_dir,
+            run_context=run_context,
         )
 
         # Print results
@@ -100,6 +126,9 @@ def translate(
             for warning in result.warnings:
                 typer.secho(f"  ⚠ {warning}", fg=typer.colors.YELLOW)
 
+        if layout_preserve:
+            _maybe_run_layout_preserver(run_context, target_langs)
+
     except Exception as e:
         typer.secho(f"✗ Error: {e}", fg=typer.colors.RED, err=True)
         if verbose:
@@ -107,6 +136,39 @@ def translate(
 
             traceback.print_exc()
         raise typer.Exit(code=1)
+
+
+def _maybe_run_layout_preserver(run_context, target_langs: list[str]) -> None:
+    from kps.layout_preserver import process_pdf
+
+    requested = [lang for lang in target_langs if lang in SUPPORTED_LAYOUT_LANGS]
+    if not requested:
+        typer.secho(
+            "⚠ Layout preserve skipped: supported languages are ru/en/fr.",
+            fg=typer.colors.YELLOW,
+        )
+        return
+
+    # Show clear header before starting
+    typer.echo("\n" + "=" * 70)
+    typer.secho("🎨 LAYOUT PRESERVATION MODE", fg=typer.colors.BLUE, bold=True)
+    typer.echo("=" * 70)
+    typer.echo("Main pipeline PDFs:    " + str(Path(run_context.output_dir)))
+    typer.secho("Layout-preserved PDFs: " + str(Path(run_context.output_dir) / "layout"), fg=typer.colors.GREEN, bold=True)
+    typer.echo("\n💡 For best layout preservation, use PDFs from the layout/ subdirectory")
+    typer.echo("=" * 70 + "\n")
+
+    output_dir = Path(run_context.output_dir) / "layout"
+    produced = process_pdf(Path(run_context.staged_input), output_dir, target_langs=requested)
+
+    # Show results with clear distinction
+    typer.echo("\n" + "=" * 70)
+    typer.secho("✅ Layout-preserved PDFs created:", fg=typer.colors.GREEN, bold=True)
+    typer.echo("=" * 70)
+    for path in produced:
+        typer.secho(f"  📄 {path}", fg=typer.colors.GREEN)
+    typer.echo("\n💡 Open these PDFs (not the main pipeline versions) for clean text rendering")
+    typer.echo("=" * 70 + "\n")
 
 
 @app.command()
