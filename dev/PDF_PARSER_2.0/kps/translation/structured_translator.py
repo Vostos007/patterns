@@ -188,7 +188,12 @@ class StructuredTranslator:
         )
         self.stats["segments_requiring_enforcement"] += 1
 
-        enforced_text = self.validator.enforce(translated_text, target_lang)
+        enforced_text = self.validator.enforce(
+            src_text=source_text,
+            tgt_text=translated_text,
+            src_lang=source_lang,
+            tgt_lang=target_lang,
+        )
 
         # Validate one last time
         final_violations = self.validator.validate(

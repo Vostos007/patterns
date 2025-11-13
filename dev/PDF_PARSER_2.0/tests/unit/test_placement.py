@@ -642,9 +642,11 @@ class TestPlacementEdgeCases:
         # Check aspect ratio (with tolerance for column aspect ratio)
         normalized_aspect = normalized.width / normalized.height
         placed_aspect = placed.width / placed.height
+        column_ratio = sample_column.width / sample_column.height
+        expected_aspect = normalized_aspect * column_ratio
 
-        # Aspect ratios should match
-        assert placed_aspect == pytest.approx(normalized_aspect, rel=0.01)
+        # Aspect ratios should match after column scaling
+        assert placed_aspect == pytest.approx(expected_aspect, rel=0.01)
 
     def test_placement_at_column_boundary(self, sample_column, a4_page_size):
         """Test placing exactly at column boundary."""

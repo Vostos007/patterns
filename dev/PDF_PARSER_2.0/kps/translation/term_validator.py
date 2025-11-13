@@ -10,6 +10,7 @@ Ensures 100% adherence to glossary terms through:
 
 import re
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from typing import List, Dict, Optional, Tuple
 import logging
 
@@ -132,12 +133,7 @@ class TermValidator:
             if len(rule.tgt) <= 2:
                 continue
             # Check if source term is present
-            src_pattern = re.compile(
-                r'\b' + re.escape(rule.src.lower()) + r'\b',
-                re.IGNORECASE
-            )
-
-            if not src_pattern.search(src_lower):
+            if not self._term_in_text(src_lower, rule.src):
                 continue  # Source term not in source text, skip
 
             # Check do_not_translate violation
@@ -182,25 +178,6 @@ class TermValidator:
                     ))
 
         return violations
-
-    def _contains_term(self, text: str, term: str) -> bool:
-        """
-        Check if text contains term as a whole word.
-        
-        Uses word boundary matching to avoid partial matches.
-        
-        Args:
-            text: Text to search in (already lowercased)
-            term: Term to search for
-            
-        Returns:
-            True if term found as whole word
-        """
-        if not term:
-            return False
-            
-        pattern = re.compile(r'\b' + re.escape(term.lower()) + r'\b')
-        return bool(pattern.search(text))
 
     def enforce(
         self,
@@ -277,6 +254,39 @@ class TermValidator:
             suffix = r"(?:'s|s)?"
         return re.compile(r"\b" + re.escape(term.lower()) + suffix + r"\b", re.IGNORECASE)
 
+    def _term_in_text(self, text: str, term: str) -> bool:
+        if not term:
+            return False
+        term_words = self._split_words(term.lower())
+        text_words = self._split_words(text)
+        if not term_words or not text_words:
+            return False
+
+        for idx in range(len(text_words) - len(term_words) + 1):
+            window = text_words[idx: idx + len(term_words)]
+            if all(
+                self._words_similar(term_word, window_word)
+                for term_word, window_word in zip(term_words, window)
+            ):
+                return True
+
+        return False
+
+    def _split_words(self, text: str) -> List[str]:
+        return re.findall(r"\w+", text)
+
+    def _words_similar(self, term_word: str, text_word: str) -> bool:
+        if term_word == text_word:
+            return True
+        if not term_word or not text_word:
+            return False
+        if term_word in text_word or text_word in term_word:
+            return True
+        if len(term_word) >= 4 and len(text_word) >= 4:
+            ratio = SequenceMatcher(None, term_word, text_word).ratio()
+            return ratio >= 0.7
+        return False
+
     def _force_case(self, text: str, needle: str) -> str:
         """Ensure the canonical term uses the expected casing."""
         lowered = text.lower()
@@ -322,11 +332,7 @@ class TermValidator:
         relevant_rules = []
 
         for rule in all_rules:
-            src_pattern = re.compile(
-                r'\b' + re.escape(rule.src.lower()) + r'\b',
-                re.IGNORECASE
-            )
-            if src_pattern.search(src_lower):
+            if self._term_in_text(src_lower, rule.src):
                 relevant_rules.append(rule)
 
         return relevant_rules
