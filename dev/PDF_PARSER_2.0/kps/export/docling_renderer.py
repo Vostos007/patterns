@@ -12,26 +12,50 @@ from docling_core.types.doc.document import DoclingDocument
 from .html_renderer import render_pdf
 
 
-def render_markdown(docling_doc: DoclingDocument, output_path: Path) -> Path:
+class DoclingExportError(RuntimeError):
+    pass
+
+
+def _export_html(docling_doc) -> str:
+    # Handle both ConversionResult and DoclingDocument
+    if hasattr(docling_doc, 'document'):
+        actual_doc = docling_doc.document
+    else:
+        actual_doc = docling_doc
+    
+    html = actual_doc.export_to_html()
+    if not html:
+        raise DoclingExportError("Docling export_to_html returned empty content")
+    return html
+
+
+def render_markdown(docling_doc, output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(docling_doc.export_to_markdown(), encoding="utf-8")
+    
+    # Handle both ConversionResult and DoclingDocument
+    if hasattr(docling_doc, 'document'):
+        actual_doc = docling_doc.document
+    else:
+        actual_doc = docling_doc
+    
+    output_path.write_text(actual_doc.export_to_markdown(), encoding="utf-8")
     return output_path
 
 
 def render_html(docling_doc: DoclingDocument, output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(docling_doc.export_to_html(), encoding="utf-8")
+    output_path.write_text(_export_html(docling_doc), encoding="utf-8")
     return output_path
 
 
 def render_docx(
-    docling_doc: DoclingDocument,
+    docling_doc,
     output_path: Path,
     reference_doc: Optional[Path] = None,
 ) -> Path:
     """Convert Docling HTML output into DOCX via pandoc."""
 
-    html_content = docling_doc.export_to_html()
+    html_content = _export_html(docling_doc)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -50,17 +74,17 @@ def render_docx(
             "-o",
             str(output_path),
         ]
-        if reference_doc:
-            cmd.insert(-1, f"--reference-doc={reference_doc}")
+        if reference_doc and reference_doc.exists():
+            cmd.extend(["--reference-doc", str(reference_doc)])
         try:
             subprocess.run(cmd, check=True, capture_output=True)
         except FileNotFoundError as exc:
-            raise RuntimeError(
+            raise DoclingExportError(
                 "pandoc is required for DOCX export. Install it from https://pandoc.org/installing.html"
             ) from exc
         except subprocess.CalledProcessError as exc:  # type: ignore[attr-defined]
             stderr = exc.stderr.decode("utf-8", errors="ignore") if exc.stderr else ""
-            raise RuntimeError(f"pandoc failed: {stderr}") from exc
+            raise DoclingExportError(f"pandoc failed: {stderr}") from exc
     finally:
         tmp_html_path.unlink(missing_ok=True)
 
@@ -68,11 +92,11 @@ def render_docx(
 
 
 def render_pdf_from_docling(
-    docling_doc: DoclingDocument,
+    docling_doc,
     output_path: Path,
     css_path: Optional[Path] = None,
 ) -> Path:
-    html_content = docling_doc.export_to_html()
+    html_content = _export_html(docling_doc)
     return render_pdf(html_content, css_path, output_path)
 
 

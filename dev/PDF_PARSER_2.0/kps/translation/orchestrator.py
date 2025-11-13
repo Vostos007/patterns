@@ -99,6 +99,7 @@ class TranslationSegment:
     segment_id: str  # e.g., "p.materials.001.seg0"
     text: str
     placeholders: Dict[str, str]  # Encoded placeholders
+    doc_ref: Optional[str] = None
 
 
 @dataclass

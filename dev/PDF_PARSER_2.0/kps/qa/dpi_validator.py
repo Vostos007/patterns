@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 import statistics
+import logging
 
 try:  # pragma: no cover - optional dependency
     import fitz  # PyMuPDF
@@ -20,6 +21,8 @@ except ImportError:  # pragma: no cover
     fitz = None
 
 from kps.core import Asset, AssetLedger, AssetType, BBox
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -242,7 +245,10 @@ class DPIValidator:
             try:
                 doc = fitz.open(pdf_path)
             except Exception as e:
-                return self._empty_report(f"Failed to open PDF: {e}")
+                # If we have placed_labels, we can continue without PDF
+                if not placed_labels:
+                    return self._empty_report(f"Failed to open PDF: {e}")
+                logger.warning(f"PDF not available, using placed_labels only: {e}")
         elif not placed_labels:
             return self._empty_report(
                 "PyMuPDF (fitz) is required for DPI validation when placed labels are not provided"

@@ -132,6 +132,20 @@ terms:
     fr: "Aiguilles à double pointe"
     protected_tokens: ["DPN"]
 
+  two_stitch_left_decrease:
+    ru: "2ВмЛЛ"
+    en: "ssk"
+    fr: "surjet simple"
+    description: "Левонаклонная убавка: снять 1 петлю лиц., снять 1 петлю лиц., провязать вместе лицевой."
+    protected_tokens: ["ssk", "surjet simple", "SS"]
+
+  two_stitch_right_decrease:
+    ru: "2ВмЛП"
+    en: "k2tog"
+    fr: "2 m ens end"
+    description: "Правонаклонная убавка: провязать 2 петли вместе лицевой."
+    protected_tokens: ["k2tog", "2 m ens end"]
+
 # Measurement units
 units:
   cm:

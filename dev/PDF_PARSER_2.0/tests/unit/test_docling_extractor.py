@@ -175,6 +175,23 @@ class TestDoclingExtractor:
         assert extractor._map_docling_type("image") == BlockType.FIGURE
         assert extractor._map_docling_type("FIGURE") == BlockType.FIGURE
 
+    def test_map_docling_type_label_fallback(self):
+        """Docling items without obj_type should fall back to label metadata."""
+
+        extractor = DoclingExtractor()
+
+        class _TableItem:
+            label = "table"
+
+        class _FigureItem:
+            class _Label:
+                value = "picture"
+
+            label = _Label()
+
+        assert extractor._map_docling_type(None, _TableItem()) == BlockType.TABLE
+        assert extractor._map_docling_type(None, _FigureItem()) == BlockType.FIGURE
+
     def test_generate_block_id_paragraph(self):
         """Test block ID generation for paragraphs."""
         extractor = DoclingExtractor()

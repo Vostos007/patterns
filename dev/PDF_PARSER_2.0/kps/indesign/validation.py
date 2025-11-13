@@ -16,6 +16,7 @@ rather than failing on the first error.
 
 from typing import List, Tuple, Optional
 import math
+import re
 
 from ..core.bbox import BBox, NormalizedBBox
 from ..anchoring.columns import Column
@@ -27,6 +28,10 @@ TOLERANCE_PERCENT = 0.01  # ±1% tolerance for relative errors
 CTM_DETERMINANT_MIN = 1e-10  # Minimum determinant for non-singular matrix
 CTM_SCALE_MAX = 100.0  # Maximum reasonable scale factor
 CTM_SCALE_MIN = 0.001  # Minimum reasonable scale factor
+
+# Asset ID validation pattern: (img|vec|tbl|vecpng|tbllive|unk)-[alphanumeric hash]-p[page]-occ[occurrence]
+# The hash can be hexadecimal (production) or descriptive (tests), minimum 4 characters
+ASSET_ID_PATTERN = re.compile(r'^(img|vec|tbl|vecpng|tbllive|unk)-[a-z0-9]{4,}-p\d+-occ\d+$')
 
 
 def validate_normalized_coords(bbox: NormalizedBBox) -> List[str]:
@@ -81,6 +86,39 @@ def validate_normalized_coords(bbox: NormalizedBBox) -> List[str]:
             f"y + h = {bbox.y:.4f} + {bbox.h:.4f} = {bbox.y + bbox.h:.4f} > 1.0 "
             "(extends beyond column bottom edge)"
         )
+
+    return errors
+
+
+def validate_asset_id(asset_id: str) -> List[str]:
+    """
+    Validate asset ID format.
+
+    Asset IDs must follow the pattern:
+    (img|vec|tbl)-[hexadecimal hash]-p[page]-occ[occurrence]
+
+    Examples:
+        - img-abc12345-p0-occ1
+        - vec-def67890-p2-occ3
+        - tbl-abcdef01-p5-occ1
+
+    Args:
+        asset_id: Asset ID string to validate
+
+    Returns:
+        List of error messages (empty if valid)
+
+    Example:
+        >>> errors = validate_asset_id("img-abc12345-p0-occ1")
+        >>> assert not errors  # Should be valid
+        >>>
+        >>> errors = validate_asset_id("invalid-id")
+        >>> assert errors  # Should have error
+    """
+    errors = []
+
+    if not ASSET_ID_PATTERN.match(asset_id):
+        errors.append(f"Invalid asset_id format: {asset_id}")
 
     return errors
 

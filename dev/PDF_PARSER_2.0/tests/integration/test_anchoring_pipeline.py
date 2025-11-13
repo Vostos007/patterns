@@ -34,6 +34,7 @@ from kps.core.assets import Asset, AssetLedger, AssetType
 from kps.core.bbox import BBox, NormalizedBBox
 from kps.anchoring.columns import detect_columns, find_asset_column
 from kps.anchoring.markers import inject_markers, extract_existing_markers, count_markers
+from kps.anchoring.anchor import anchor_assets_to_blocks
 
 
 class TestAnchoringPipeline:
@@ -70,23 +71,30 @@ class TestAnchoringPipeline:
             assert asset_column is not None, \
                 f"Asset {asset.asset_id} could not be assigned to a column"
 
-        # Step 3: Anchor assets to blocks (using marker injection)
-        # The marker injection process handles anchoring
-        modified_doc = inject_markers(sample_kps_document, sample_asset_ledger)
+        # Step 3: Anchor assets to blocks
+        # This sets the anchor_to field for each asset
+        anchored_ledger, anchoring_report = anchor_assets_to_blocks(
+            sample_asset_ledger, sample_kps_document
+        )
+        assert anchoring_report.success_rate == 1.0, \
+            f"Anchoring failed: {anchoring_report.unanchored_assets}"
 
-        # Step 4: Validate marker injection
+        # Step 4: Inject markers
+        modified_doc = inject_markers(sample_kps_document, anchored_ledger)
+
+        # Step 5: Validate marker injection
         marker_stats = count_markers(modified_doc)
-        assert marker_stats["total_markers"] == len(sample_asset_ledger.assets), \
-            f"Expected {len(sample_asset_ledger.assets)} markers, found {marker_stats['total_markers']}"
+        assert marker_stats["total_markers"] == len(anchored_ledger.assets), \
+            f"Expected {len(anchored_ledger.assets)} markers, found {marker_stats['total_markers']}"
 
-        # Step 5: Validate 100% asset coverage
+        # Step 6: Validate 100% asset coverage
         all_markers = set()
         for section in modified_doc.sections:
             for block in section.blocks:
                 markers = extract_existing_markers(block.content)
                 all_markers.update(markers)
 
-        expected_asset_ids = {asset.asset_id for asset in sample_asset_ledger.assets}
+        expected_asset_ids = {asset.asset_id for asset in anchored_ledger.assets}
         assert all_markers == expected_asset_ids, \
             f"Marker coverage mismatch. Expected: {expected_asset_ids}, Found: {all_markers}"
 
@@ -110,7 +118,7 @@ class TestAnchoringPipeline:
             language="ru",
         )
 
-        # Materials section (left column)
+        # Materials section (left column) - need 3+ blocks for DBSCAN
         materials_blocks = [
             ContentBlock(
                 block_id="p.materials.001",
@@ -128,9 +136,17 @@ class TestAnchoringPipeline:
                 page_number=0,
                 reading_order=1,
             ),
+            ContentBlock(
+                block_id="p.materials.003",
+                block_type=BlockType.PARAGRAPH,
+                content="Дополнительно: маркеры, игла",
+                bbox=BBox(50, 180, 250, 210),
+                page_number=0,
+                reading_order=4,
+            ),
         ]
 
-        # Instructions section (right column)
+        # Instructions section (right column) - need 3+ blocks for DBSCAN
         instructions_blocks = [
             ContentBlock(
                 block_id="p.instructions.001",
@@ -147,6 +163,14 @@ class TestAnchoringPipeline:
                 bbox=BBox(280, 140, 480, 170),
                 page_number=0,
                 reading_order=3,
+            ),
+            ContentBlock(
+                block_id="p.instructions.003",
+                block_type=BlockType.PARAGRAPH,
+                content="Перейти на спицы 4.5мм",
+                bbox=BBox(280, 180, 480, 210),
+                page_number=0,
+                reading_order=5,
             ),
         ]
 
@@ -216,15 +240,20 @@ class TestAnchoringPipeline:
         columns = detect_columns(all_blocks)
         assert len(columns) == 2, "Should detect 2 columns"
 
-        # 2. Inject markers (handles anchoring internally)
-        modified_doc = inject_markers(document, ledger)
+        # 2. Anchor assets to blocks
+        anchored_ledger, anchoring_report = anchor_assets_to_blocks(ledger, document)
+        assert anchoring_report.success_rate == 1.0, \
+            f"Anchoring failed: {anchoring_report.unanchored_assets}"
 
-        # 3. Validate results
+        # 3. Inject markers
+        modified_doc = inject_markers(document, anchored_ledger)
+
+        # 4. Validate results
         marker_stats = count_markers(modified_doc)
         assert marker_stats["total_markers"] == 2, \
             f"Expected 2 markers, found {marker_stats['total_markers']}"
 
-        # 4. Verify each asset has marker in correct block
+        # 5. Verify each asset has marker in correct block
         materials_section_modified = modified_doc.sections[0]
         instructions_section_modified = modified_doc.sections[1]
 
@@ -248,8 +277,15 @@ class TestAnchoringPipeline:
 
         All assets in the ledger must have markers injected.
         """
+        # First anchor assets to blocks
+        anchored_ledger, anchoring_report = anchor_assets_to_blocks(
+            sample_asset_ledger, sample_kps_document
+        )
+        assert anchoring_report.success_rate == 1.0, \
+            f"Anchoring failed: {anchoring_report.unanchored_assets}"
+
         # Run pipeline
-        modified_doc = inject_markers(sample_kps_document, sample_asset_ledger)
+        modified_doc = inject_markers(sample_kps_document, anchored_ledger)
 
         # Extract all markers from document
         all_markers = set()
@@ -259,7 +295,7 @@ class TestAnchoringPipeline:
                 all_markers.update(markers)
 
         # Verify 100% coverage
-        expected_asset_ids = {asset.asset_id for asset in sample_asset_ledger.assets}
+        expected_asset_ids = {asset.asset_id for asset in anchored_ledger.assets}
 
         missing_assets = expected_asset_ids - all_markers
         extra_markers = all_markers - expected_asset_ids
@@ -293,11 +329,11 @@ class TestAnchoringPipeline:
                 "source_bbox": BBox(100, 200, 200, 300),
                 "target_bbox": BBox(101, 201, 201, 301),  # +1pt deviation
             },
-            # Asset 3: Within 1% tolerance (large asset)
+            # Asset 3: Within 1% tolerance (large asset within column bounds)
             {
                 "asset_id": "img-large-p0-occ1",
-                "source_bbox": BBox(100, 200, 600, 700),  # 500x500
-                "target_bbox": BBox(103, 203, 603, 703),  # +3pt (< 1% of 500)
+                "source_bbox": BBox(60, 150, 240, 450),  # 180x300 (within column)
+                "target_bbox": BBox(61, 151, 241, 451),  # +1pt diagonal = 1.41pt (< 2pt)
             },
             # Asset 4: Outside tolerance (should fail)
             {
@@ -348,33 +384,40 @@ class TestAnchoringPipeline:
 
         This simulates the full workflow including serialization.
         """
-        # Step 1: Inject markers
-        modified_doc = inject_markers(sample_kps_document, sample_asset_ledger)
+        # Step 1: Anchor assets to blocks
+        anchored_ledger, anchoring_report = anchor_assets_to_blocks(
+            sample_asset_ledger, sample_kps_document
+        )
+        assert anchoring_report.success_rate == 1.0, \
+            f"Anchoring failed: {anchoring_report.unanchored_assets}"
 
-        # Step 2: Serialize to JSON (simulates saving to disk)
+        # Step 2: Inject markers
+        modified_doc = inject_markers(sample_kps_document, anchored_ledger)
+
+        # Step 3: Serialize to JSON (simulates saving to disk)
         doc_path = temp_output_dir / "document.json"
         ledger_path = temp_output_dir / "ledger.json"
 
         modified_doc.save_json(doc_path)
-        sample_asset_ledger.save_json(ledger_path)
+        anchored_ledger.save_json(ledger_path)
 
-        # Step 3: Load back from JSON
+        # Step 4: Load back from JSON
         loaded_doc = KPSDocument.load_json(doc_path)
         loaded_ledger = AssetLedger.load_json(ledger_path)
 
-        # Step 4: Extract markers from loaded document
+        # Step 5: Extract markers from loaded document
         extracted_markers = set()
         for section in loaded_doc.sections:
             for block in section.blocks:
                 markers = extract_existing_markers(block.content)
                 extracted_markers.update(markers)
 
-        # Step 5: Verify markers match assets
+        # Step 6: Verify markers match assets
         expected_asset_ids = {asset.asset_id for asset in loaded_ledger.assets}
         assert extracted_markers == expected_asset_ids, \
             "Round-trip validation failed: markers don't match assets"
 
-        # Step 6: Verify marker format is valid
+        # Step 7: Verify marker format is valid
         marker_pattern = r"\[\[([a-z]+-[a-f0-9]{8}-p\d+-occ\d+)\]\]"
         for section in loaded_doc.sections:
             for block in section.blocks:
@@ -584,7 +627,8 @@ class TestPipelinePerformance:
 
         # Run pipeline
         columns = detect_columns(blocks)
-        modified_doc = inject_markers(document, ledger)
+        anchored_ledger, anchoring_report = anchor_assets_to_blocks(ledger, document)
+        modified_doc = inject_markers(document, anchored_ledger)
 
         elapsed_time = time.time() - start_time
 

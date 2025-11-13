@@ -108,7 +108,10 @@ class Segmenter:
             )
 
         return TranslationSegment(
-            segment_id=segment_id, text=encoded_text, placeholders=placeholders
+            segment_id=segment_id,
+            text=encoded_text,
+            placeholders=placeholders,
+            doc_ref=getattr(block, "doc_ref", None),
         )
 
     def _encode_block_text(self, text: str) -> Tuple[str, Dict[str, str]]:

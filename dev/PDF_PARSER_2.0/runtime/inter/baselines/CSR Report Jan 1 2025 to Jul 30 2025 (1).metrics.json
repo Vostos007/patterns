@@ -1,0 +1,11 @@
+{
+  "source_file": "/Users/vostos/Dev/Hollywool patterns/dev/PDF_PARSER_2.0/runtime/input/CSR Report Jan 1 2025 to Jul 30 2025 (1).PDF",
+  "sections": 1,
+  "total_blocks": 119,
+  "block_types": {
+    "paragraph": 119
+  },
+  "doc_refs_with_block": 119,
+  "doc_refs_missing": 0,
+  "docling_block_map": 119
+}

@@ -18,7 +18,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union, cast
 
 # Extraction
 from kps.extraction.docling_extractor import DoclingExtractor
@@ -69,16 +69,18 @@ except ImportError:
     TRANSLATION_QA_AVAILABLE = False
 
 from kps.translation.term_validator import TermRule, TermValidator
+from kps.io.layout import RunContext
 from kps.export import (
     build_docx_from_structure,
     render_docx_inplace,
     render_html,
     render_pdf,
+    export_pdf_browser,
     load_pdf_style_map,
-    render_docx_from_docling,
-    render_html_from_docling,
-    render_markdown_from_docling,
-    render_pdf_from_docling,
+    export_docx_with_fallback,
+    export_markdown_with_fallback,
+    export_pdf_with_fallback,
+    write_html_document,
 )
 from kps.export.docling_writer import apply_translations
 
@@ -120,6 +122,11 @@ class PipelineConfig:
     # Knowledge Base (NEW)
     enable_knowledge_base: bool = True  # Включить RAG
     knowledge_db_path: Optional[str] = "data/knowledge.db"
+
+    # RAG Configuration (NEW)
+    rag_enabled: bool = True  # Включить RAG поиск
+    rag_examples_limit: int = 3  # Количество семантических примеров
+    rag_min_similarity: float = 0.75  # Порог релевантности для RAG
 
     # QA
     enable_qa: bool = False  # QA проверка (опционально)
@@ -201,6 +208,7 @@ class UnifiedPipeline:
         self._init_qa()
         self._init_export()
         self.docling_document: Optional[DoclingDocument] = None
+        self._cached_css_text: Optional[str] = None
         self.docling_block_map: Dict[str, object] = {}
 
         logger.info("UnifiedPipeline initialized")
@@ -285,6 +293,7 @@ class UnifiedPipeline:
             memory=self.memory,
             enable_few_shot=self.config.enable_few_shot,
             enable_auto_suggestions=self.config.enable_auto_suggestions,
+            config=self.config,  # Pass config for RAG parameters
         )
 
         # FIXED: Connect Knowledge Base to translator for RAG
@@ -299,7 +308,11 @@ class UnifiedPipeline:
                 self.term_validator,
                 min_pass_rate=0.95,
                 min_len_ratio=0.3,
-                max_len_ratio=2.5,
+                max_len_ratio=2.8,
+                len_ratio_overrides={
+                    ("en", "ru"): (0.25, 3.2),
+                    ("ru", "en"): (0.25, 2.8),
+                },
             )
 
         logger.debug("Translation system initialized")
@@ -390,6 +403,7 @@ class UnifiedPipeline:
         input_file: Union[str, Path],
         target_languages: List[str],
         output_dir: Optional[Union[str, Path]] = None,
+        run_context: Optional[RunContext] = None,
     ) -> PipelineResult:
         """
         Обработать документ полностью.
@@ -398,6 +412,7 @@ class UnifiedPipeline:
             input_file: Входной файл (PDF, DOCX, etc.)
             target_languages: Целевые языки ["en", "fr", "ru"]
             output_dir: Папка для выходных файлов
+            run_context: Контекст запуска (управление input/inter/output структурой)
 
         Returns:
             PipelineResult с результатами обработки
@@ -412,6 +427,9 @@ class UnifiedPipeline:
 
         output_path = Path(output_dir) if output_dir else input_path.parent / "output"
         output_path.mkdir(parents=True, exist_ok=True)
+
+        if run_context:
+            logger.info(f"Run context: {run_context.slug}/{run_context.version}")
 
         logger.info(f"Processing: {input_path.name}")
         logger.info(f"Target languages: {target_languages}")
@@ -429,6 +447,8 @@ class UnifiedPipeline:
             pages_extracted = len(document.sections)
             logger.info(f"Extracted {pages_extracted} sections from document")
             self.docling_document = getattr(document, "docling_document", None)
+            if run_context:
+                run_context.dump_docling(self.docling_document)
         except Exception as e:
             errors.append(f"Extraction failed: {e}")
             logger.error(f"Extraction error: {e}")
@@ -565,7 +585,7 @@ class UnifiedPipeline:
                 output_file = output_path / f"{input_path.stem}_{target_lang}.{ext}"
 
                 try:
-                    self._export_translation_for_format(
+                    export_warnings = self._export_translation_for_format(
                         fmt=fmt,
                         translated_doc=translated_doc,
                         translated_segments=translated_segments,
@@ -577,6 +597,7 @@ class UnifiedPipeline:
                         docling_document=docling_doc_for_lang,
                     )
                     output_files[target_lang][fmt] = str(output_file)
+                    warnings.extend(export_warnings)
                     logger.info("Exported %s for %s", fmt, target_lang)
 
                 except Exception as e:
@@ -692,6 +713,7 @@ class UnifiedPipeline:
             "markdown": "md",
             "md": "md",
             "json": "json",
+            "html": "html",
             "idml": "idml",
         }
         return mapping.get(fmt.lower(), fmt.lower())
@@ -707,75 +729,95 @@ class UnifiedPipeline:
         original_input: Path,
         original_document: KPSDocument,
         docling_document: Optional[DoclingDocument] = None,
-    ) -> None:
+    ) -> List[str]:
+        warnings: List[str] = []
         fmt_lower = fmt.lower()
-
-        if docling_document:
-            try:
-                if fmt_lower == "docx":
-                    reference_doc = self._resolve_docx_reference()
-                    render_docx_from_docling(docling_document, output_file, reference_doc)
-                    return
-                if fmt_lower == "pdf":
-                    css_path = self._resolve_pdf_css()
-                    render_pdf_from_docling(docling_document, output_file, css_path)
-                    return
-                if fmt_lower in {"markdown", "md"}:
-                    render_markdown_from_docling(docling_document, output_file)
-                    return
-                if fmt_lower == "html":
-                    render_html_from_docling(docling_document, output_file)
-                    return
-            except Exception as exc:
-                logger.warning(
-                    "Docling-based %s export failed, falling back to legacy path: %s",
-                    fmt,
-                    exc,
-                )
+        has_docling = docling_document is not None
 
         if fmt_lower == "docx":
-            if docling_document is not None:
-                try:
-                    build_docx_from_structure(translated_doc, output_file)
-                    return
-                except Exception as exc:  # pragma: no cover - defensive
-                    logger.warning(
-                        "Structured DOCX export failed, falling back to template mutation",
-                        exc_info=exc,
-                    )
-            if original_input.suffix.lower() == ".docx" and original_input.exists():
-                render_docx_inplace(
-                    original_input,
-                    original_document,
-                    translated_doc,
-                    output_file,
+            fallback_builder = self._build_docx_fallback_builder(
+                translated_doc=translated_doc,
+                original_input=original_input,
+                original_document=original_document,
+                output_file=output_file,
+            )
+            if has_docling:
+                docling_doc = cast(DoclingDocument, docling_document)
+                result = export_docx_with_fallback(
+                    docling_doc,
+                    output_path=output_file,
+                    reference_doc=self._resolve_docx_reference(),
+                    fallback_builder=fallback_builder,
                 )
-            else:
-                logger.warning(
-                    "DOCX export fallback: source is %s, generating document from structure",
-                    original_input.suffix or "unknown",
-                )
-                build_docx_from_structure(translated_doc, output_file)
-            return
+                warnings.extend(result.warnings)
+                if result.fallback_used:
+                    warnings.append(f"DOCX fallback renderer used: {result.renderer}")
+                return warnings
+            _, label = fallback_builder()
+            warnings.append(f"DOCX renderer used fallback (no Docling doc): {label}")
+            return warnings
 
         if fmt_lower == "pdf":
-            html_content = render_html(translated_doc)
-            css_path = self._resolve_pdf_css()
-            render_pdf(html_content, css_path, output_file)
-            return
+            fallback_builder = self._build_pdf_fallback_builder(
+                translated_doc=translated_doc,
+                output_file=output_file,
+            )
+            if has_docling:
+                docling_doc = cast(DoclingDocument, docling_document)
+                shadow_html = output_file.with_suffix(".html")
+                self._write_docling_html(docling_doc, shadow_html)
+                result = export_pdf_with_fallback(
+                    docling_doc,
+                    output_path=output_file,
+                    css_path=self._resolve_pdf_css(),
+                    fallback_builder=fallback_builder,
+                )
+                warnings.extend(result.warnings)
+                if result.fallback_used:
+                    warnings.append(f"PDF fallback renderer used: {result.renderer}")
+                warnings.append(f"HTML snapshot saved: {shadow_html}")
+                return warnings
+            _, label = fallback_builder()
+            warnings.append(f"PDF renderer used fallback (no Docling doc): {label}")
+            return warnings
 
         if fmt_lower in {"markdown", "md"}:
-            self._export_markdown(translated_segments, output_file)
-            return
+            fallback_builder = self._build_markdown_fallback_builder(
+                translated_segments=translated_segments,
+                output_file=output_file,
+            )
+            if has_docling:
+                docling_doc = cast(DoclingDocument, docling_document)
+                result = export_markdown_with_fallback(
+                    docling_doc,
+                    output_path=output_file,
+                    fallback_builder=fallback_builder,
+                )
+                warnings.extend(result.warnings)
+                if result.fallback_used:
+                    warnings.append(f"Markdown fallback renderer used: {result.renderer}")
+                return warnings
+            _, label = fallback_builder()
+            warnings.append(f"Markdown renderer used fallback (no Docling doc): {label}")
+            return warnings
+
+        if fmt_lower == "html":
+            if not has_docling:
+                warnings.append("HTML export skipped: Docling document unavailable")
+                return warnings
+            docling_doc = cast(DoclingDocument, docling_document)
+            self._write_docling_html(docling_doc, output_file)
+            warnings.append(f"HTML snapshot saved: {output_file}")
+            return warnings
 
         if fmt_lower == "json":
             self._export_json(translated_segments, output_file)
-            return
+            return warnings
 
         if fmt_lower == "idml" and self.idml_handler:
             logger.warning("IDML export not implemented yet; emitting JSON snapshot")
             self._export_json(translated_segments, output_file.with_suffix(".json"))
-            return
+            return warnings
 
         raise ValueError(f"Unsupported export format: {fmt}")
 
@@ -791,6 +833,84 @@ class UnifiedPipeline:
                 return candidate
         default_css = self.style_map_path.parent / "pdf.css"
         return default_css if default_css.exists() else None
+
+    def _build_docx_fallback_builder(
+        self,
+        translated_doc: KPSDocument,
+        original_input: Path,
+        original_document: KPSDocument,
+        output_file: Path,
+    ) -> Callable[[], Tuple[Path, str]]:
+        def _builder() -> Tuple[Path, str]:
+            try:
+                build_docx_from_structure(translated_doc, output_file)
+                return output_file, "docx-structure"
+            except Exception as exc:
+                logger.warning(
+                    "Structured DOCX export failed, trying template fallback: %s",
+                    exc,
+                )
+                if original_input.suffix.lower() == ".docx" and original_input.exists():
+                    render_docx_inplace(
+                        original_input,
+                        original_document,
+                        translated_doc,
+                        output_file,
+                    )
+                    return output_file, "docx-template"
+                raise
+
+        return _builder
+
+    def _build_pdf_fallback_builder(
+        self,
+        translated_doc: KPSDocument,
+        output_file: Path,
+    ) -> Callable[[], Tuple[Path, str]]:
+        def _builder() -> Tuple[Path, str]:
+            html_content = render_html(translated_doc)
+            css_path = self._resolve_pdf_css()
+            try:
+                render_pdf(html_content, css_path, output_file)
+                return output_file, "pdf-html"
+            except Exception as exc:
+                logger.warning("HTML PDF renderer failed: %s", exc)
+                try:
+                    export_pdf_browser(html_content, output_file)
+                    return output_file, "pdf-browser"
+                except Exception as browser_exc:
+                    logger.error("Browser PDF fallback also failed: %s", browser_exc)
+                    raise
+
+        return _builder
+
+    def _build_markdown_fallback_builder(
+        self,
+        translated_segments: List[str],
+        output_file: Path,
+    ) -> Callable[[], Tuple[Path, str]]:
+        def _builder() -> Tuple[Path, str]:
+            self._export_markdown(translated_segments, output_file)
+            return output_file, "markdown-segments"
+
+        return _builder
+
+    def _write_docling_html(
+        self, docling_document: DoclingDocument, html_path: Path
+    ) -> Path:
+        css_text = self._get_cached_css_text()
+        write_html_document(docling_document, html_path, css_text)
+        return html_path
+
+    def _get_cached_css_text(self) -> Optional[str]:
+        if self._cached_css_text is not None:
+            return self._cached_css_text
+        css_path = self._resolve_pdf_css()
+        if css_path and css_path.exists():
+            self._cached_css_text = css_path.read_text(encoding="utf-8")
+        else:
+            self._cached_css_text = None
+        return self._cached_css_text
 
     def _resolve_docx_reference(self) -> Optional[Path]:
         contract = self._get_style_contract()

@@ -77,10 +77,12 @@ class TestTranslationOrchestrator:
         # Mock language detection
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         # Mock translation
         translate_mock = Mock()
         translate_mock.choices = [Mock(message=Mock(content="Translated text 1---Translated text 2"))]
+        translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
 
@@ -126,13 +128,16 @@ class TestTranslationOrchestrator:
         # Mock language detection
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         # Mock translations (EN and FR)
         translate_mock_en = Mock()
         translate_mock_en.choices = [Mock(message=Mock(content="English text"))]
+        translate_mock_en.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         translate_mock_fr = Mock()
         translate_mock_fr.choices = [Mock(message=Mock(content="Texte français"))]
+        translate_mock_fr.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [
             detect_mock,
@@ -175,10 +180,12 @@ class TestTranslationOrchestrator:
         # Mock responses
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         translate_mock = Mock()
         # Simulated translation that preserves placeholders
         translate_mock.choices = [Mock(message=Mock(content='Translated <ph id="PH001" /> text'))]
+        translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
 
@@ -220,10 +227,12 @@ class TestTranslationOrchestrator:
         # Mock responses
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         translate_mock = Mock()
         # Simulated translation preserving newlines
         translate_mock.choices = [Mock(message=Mock(content="Line 1\nLine 2\nLine 3"))]
+        translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
 
@@ -268,9 +277,11 @@ class TestTranslationOrchestrator:
         # Mock responses
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         translate_mock = Mock()
         translate_mock.choices = [Mock(message=Mock(content="knit stitch"))]
+        translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
 
@@ -531,10 +542,12 @@ Glossary:
         # Mock language detection
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         # Mock translation with WRONG segment count
         translate_mock = Mock()
         translate_mock.choices = [Mock(message=Mock(content="Only one segment"))]  # Expected 2
+        translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
 
@@ -583,12 +596,14 @@ Glossary:
         # Mock responses
         detect_mock = Mock()
         detect_mock.choices = [Mock(message=Mock(content="ru"))]
+        detect_mock.usage = Mock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
 
         translate_mock = Mock()
         # Simulated translation preserving placeholder
         translate_mock.choices = [Mock(message=Mock(
             content='Before image.\n<ph id="ASSET_IMG-ABC12345-P1-OCC1" />\nAfter image.'
         ))]
+        translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
 

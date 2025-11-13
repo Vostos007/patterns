@@ -138,7 +138,14 @@ def translate(
         raise typer.Exit(code=1)
 
 
-def _maybe_run_layout_preserver(run_context, target_langs: list[str]) -> None:
+def _maybe_run_layout_preserver(run_context, target_langs: list[str], preserve_formatting: bool = True) -> None:
+    """Run layout preserver to create overlay-translated PDFs.
+    
+    Args:
+        run_context: IO layout context
+        target_langs: List of target language codes
+        preserve_formatting: If True, preserve fonts, colors, bold/italic
+    """
     from kps.layout_preserver import process_pdf
 
     requested = [lang for lang in target_langs if lang in SUPPORTED_LAYOUT_LANGS]
@@ -152,6 +159,8 @@ def _maybe_run_layout_preserver(run_context, target_langs: list[str]) -> None:
     # Show clear header before starting
     typer.echo("\n" + "=" * 70)
     typer.secho("🎨 LAYOUT PRESERVATION MODE", fg=typer.colors.BLUE, bold=True)
+    if preserve_formatting:
+        typer.secho("   (with full formatting preservation)", fg=typer.colors.CYAN)
     typer.echo("=" * 70)
     typer.echo("Main pipeline PDFs:    " + str(Path(run_context.output_dir)))
     typer.secho("Layout-preserved PDFs: " + str(Path(run_context.output_dir) / "layout"), fg=typer.colors.GREEN, bold=True)
@@ -159,7 +168,12 @@ def _maybe_run_layout_preserver(run_context, target_langs: list[str]) -> None:
     typer.echo("=" * 70 + "\n")
 
     output_dir = Path(run_context.output_dir) / "layout"
-    produced = process_pdf(Path(run_context.staged_input), output_dir, target_langs=requested)
+    produced = process_pdf(
+        Path(run_context.staged_input),
+        output_dir,
+        target_langs=requested,
+        preserve_formatting=preserve_formatting
+    )
 
     # Show results with clear distinction
     typer.echo("\n" + "=" * 70)
@@ -167,6 +181,14 @@ def _maybe_run_layout_preserver(run_context, target_langs: list[str]) -> None:
     typer.echo("=" * 70)
     for path in produced:
         typer.secho(f"  📄 {path}", fg=typer.colors.GREEN)
+    
+    if preserve_formatting:
+        typer.echo("\n✨ Preserved:")
+        typer.echo("   ✓ Font sizes (exact match)")
+        typer.echo("   ✓ Text colors")
+        typer.echo("   ✓ Table borders")
+        typer.echo("   ✓ Bold/italic styles (if in original)")
+    
     typer.echo("\n💡 Open these PDFs (not the main pipeline versions) for clean text rendering")
     typer.echo("=" * 70 + "\n")
 

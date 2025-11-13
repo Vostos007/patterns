@@ -30,8 +30,8 @@ def test_translation_qa_checks_length_ratio():
     batch = [
         {
             "id": "seg2",
-            "src": "Очень длинный оригинальный текст",
-            "tgt": "Short",
+            "src": "Очень длинный оригинальный текст для проверки",
+            "tgt": "Short translated text",
             "src_lang": "ru",
             "tgt_lang": "en",
         }

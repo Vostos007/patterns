@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-11-12T16:33:48.751860",
+  "status": "PRODUCTION_READY",
+  "dependencies": {
+    "pandoc": "3.8.2.1",
+    "weasyprint": "66.0",
+    "python": "3.14.0"
+  },
+  "export_capabilities": {
+    "pdf": "WeasyPrint + CSS styling",
+    "docx": "Pandoc enhanced + reference document",
+    "html": "Docling native export",
+    "markdown": "Pandoc conversion",
+    "json": "Docling structured data"
+  },
+  "test_results": {
+    "pdf_rendering": "SUCCESS",
+    "docx_export": "SUCCESS",
+    "html_generation": "SUCCESS",
+    "qa_validation": "PASS",
+    "glossary_enforcement": "ACTIVE"
+  },
+  "artifacts": [
+    {
+      "name": "CSR Report Jan 1 2025 to Jul 30 2025 (1)_ru.html",
+      "size_kb": 47.1,
+      "type": "html"
+    },
+    {
+      "name": "CSR Report Jan 1 2025 to Jul 30 2025 (1)_ru.pdf",
+      "size_kb": 106.3,
+      "type": "pdf"
+    },
+    {
+      "name": "CSR Report Jan 1 2025 to Jul 30 2025 (1)_ru.json",
+      "size_kb": 16.0,
+      "type": "json"
+    },
+    {
+      "name": "test_enhanced_docx.docx",
+      "size_kb": 16.5,
+      "type": "docx"
+    },
+    {
+      "name": "test_output.md",
+      "size_kb": 44.2,
+      "type": "md"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ block hierarchy preservation.
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
@@ -305,7 +305,13 @@ class DoclingExtractor:
         for doc_ref, item in iterable:
             # Get item properties
             item_type = getattr(item, "obj_type", None)
-            text = getattr(item, "text", "").strip()
+            block_type = self._map_docling_type(item_type, item)
+
+            raw_text = getattr(item, "text", "")
+            text = raw_text.strip() if isinstance(raw_text, str) else ""
+
+            if block_type == BlockType.TABLE:
+                text = self._extract_table_content(item, docling_doc)
 
             if not text:
                 continue
@@ -346,9 +352,6 @@ class DoclingExtractor:
                     )
                     self.current_section_type = SectionType.COVER
 
-                # Map Docling type to BlockType
-                block_type = self._map_docling_type(item_type)
-
                 # Create block
                 block = self._create_content_block(
                     item,
@@ -365,6 +368,180 @@ class DoclingExtractor:
             sections.append(current_section)
 
         return sections
+
+    def _extract_table_content(
+        self, table_item: Any, docling_doc: Optional[DoclingDocument]
+    ) -> str:
+        """Render Docling table nodes into Markdown text."""
+
+        if table_item is None:
+            return ""
+
+        doc = docling_doc or self.last_docling_document
+
+        markdown = self._export_docling_table(table_item, doc)
+        if markdown:
+            return markdown
+
+        dataframe_md = self._export_table_via_dataframe(table_item, doc)
+        if dataframe_md:
+            return dataframe_md
+
+        fallback = self._render_table_cells(table_item)
+        if fallback:
+            return fallback
+
+        logger.debug("Docling table %s had no renderable content", getattr(table_item, "cref", None))
+        return ""
+
+    def _export_docling_table(
+        self, table_item: Any, docling_doc: Optional[DoclingDocument]
+    ) -> str:
+        """Try Docling's native Markdown export helpers."""
+
+        exporter = getattr(table_item, "export_to_markdown", None)
+        if not callable(exporter):
+            return ""
+
+        candidates: List[Optional[DoclingDocument]] = []
+        if docling_doc and docling_doc not in candidates:
+            candidates.append(docling_doc)
+        if self.last_docling_document and self.last_docling_document not in candidates:
+            candidates.append(self.last_docling_document)
+        candidates.append(None)  # Fall back to legacy no-arg signature
+
+        for candidate in candidates:
+            try:
+                result = (
+                    exporter(candidate)
+                    if candidate is not None
+                    else exporter()
+                )
+            except TypeError:
+                # Some versions only support the no-arg form
+                result = exporter()
+            except Exception as exc:  # pragma: no cover - diagnostic only
+                logger.debug("Docling markdown export failed: %s", exc)
+                break
+
+            text = (result or "").strip()
+            if text:
+                caption = self._get_table_caption(table_item)
+                if caption:
+                    return f"{caption}\n{text}"
+                return text
+
+        return ""
+
+    def _export_table_via_dataframe(
+        self, table_item: Any, docling_doc: Optional[DoclingDocument]
+    ) -> str:
+        """Render table through pandas DataFrame if available."""
+
+        exporter = getattr(table_item, "export_to_dataframe", None)
+        if not callable(exporter):
+            return ""
+
+        try:  # Import locally to keep module import cost low
+            import pandas as pd  # type: ignore
+        except Exception:  # pragma: no cover - pandas optional
+            return ""
+
+        candidates: List[Optional[DoclingDocument]] = []
+        if docling_doc and docling_doc not in candidates:
+            candidates.append(docling_doc)
+        if self.last_docling_document and self.last_docling_document not in candidates:
+            candidates.append(self.last_docling_document)
+        candidates.append(None)
+
+        for candidate in candidates:
+            try:
+                df = (
+                    exporter(candidate)
+                    if candidate is not None
+                    else exporter()
+                )
+            except TypeError:
+                df = exporter()
+            except Exception as exc:  # pragma: no cover - diagnostic only
+                logger.debug("Docling dataframe export failed: %s", exc)
+                break
+
+            if df is None:
+                continue
+
+            try:
+                pd_df = pd.DataFrame(df)
+            except Exception:
+                continue
+
+            if pd_df.empty:
+                continue
+
+            if not isinstance(pd_df.index, pd.RangeIndex):
+                pd_df = pd_df.reset_index()
+                index_col = pd_df.columns[0]
+                if index_col == "index":
+                    pd_df = pd_df.rename(columns={"index": "Row"})
+
+            try:
+                rendered = pd_df.to_markdown(index=False).strip()
+            except Exception:
+                continue
+
+            if rendered:
+                caption = self._get_table_caption(table_item)
+                if caption:
+                    return f"{caption}\n{rendered}"
+                return rendered
+
+        return ""
+
+    def _render_table_cells(self, table_item: Any) -> str:
+        """Fallback renderer that walks Docling cell metadata."""
+
+        data = getattr(table_item, "data", None) or {}
+        cells = data.get("table_cells") if isinstance(data, dict) else None
+        if not cells:
+            return ""
+
+        row_count = 0
+        col_count = 0
+        for cell in cells:
+            row_count = max(row_count, cell.get("end_row_offset_idx", 0))
+            col_count = max(col_count, cell.get("end_col_offset_idx", 0))
+
+        if row_count == 0 or col_count == 0:
+            return ""
+
+        grid: List[List[str]] = [["" for _ in range(col_count)] for _ in range(row_count)]
+
+        for cell in cells:
+            text = (cell.get("text") or "").strip()
+            if not text:
+                continue
+
+            row = min(row_count - 1, max(0, cell.get("start_row_offset_idx", 0)))
+            col = min(col_count - 1, max(0, cell.get("start_col_offset_idx", 0)))
+
+            existing = grid[row][col]
+            grid[row][col] = text if not existing else f"{existing} / {text}"
+
+        rows = [row for row in grid if any(col.strip() for col in row)]
+        if not rows:
+            return ""
+
+        header = rows[0]
+        lines = [" | ".join(header).strip()]
+
+        if len(rows) > 1:
+            separator = " | ".join("---" if cell else "---" for cell in header).strip()
+            if separator:
+                lines.append(separator)
+            for row in rows[1:]:
+                lines.append(" | ".join(cell or "" for cell in row).strip())
+
+        return "\n".join(line for line in lines if line).strip()
 
     def _iter_docling_items(self, docling_doc: DoclingDocument):
         """
@@ -421,7 +598,9 @@ class DoclingExtractor:
         logger.debug(f"No section type match for heading: {heading_text}")
         return SectionType.INSTRUCTIONS
 
-    def _map_docling_type(self, docling_type: Optional[str]) -> BlockType:
+    def _map_docling_type(
+        self, docling_type: Optional[str], docling_item: Optional[Any] = None
+    ) -> BlockType:
         """
         Map Docling element type to KPS BlockType.
 
@@ -432,6 +611,11 @@ class DoclingExtractor:
             BlockType enum value
         """
         if not docling_type:
+            label_hint = self._infer_docling_label(docling_item)
+            if label_hint == "table":
+                return BlockType.TABLE
+            if label_hint in {"figure", "image", "picture"}:
+                return BlockType.FIGURE
             return BlockType.PARAGRAPH
 
         type_lower = docling_type.lower()
@@ -445,7 +629,55 @@ class DoclingExtractor:
         elif "figure" in type_lower or "image" in type_lower:
             return BlockType.FIGURE
         else:
+            label_hint = self._infer_docling_label(docling_item)
+            if label_hint == "table":
+                return BlockType.TABLE
+            if label_hint in {"figure", "image", "picture"}:
+                return BlockType.FIGURE
             return BlockType.PARAGRAPH
+
+    def _infer_docling_label(self, docling_item: Optional[Any]) -> Optional[str]:
+        """Extract lowercase label value from Docling items when available."""
+
+        if docling_item is None:
+            return None
+
+        label = getattr(docling_item, "label", None)
+        if label is None:
+            return None
+
+        if hasattr(label, "value"):
+            return str(label.value).lower()
+
+        try:
+            return str(label).lower()
+        except Exception:
+            return None
+
+    def _get_table_caption(self, table_item: Any) -> Optional[str]:
+        """Best-effort extraction of table captions across Docling versions."""
+
+        caption = getattr(table_item, "caption_text", None)
+        if callable(caption):
+            try:
+                caption = caption()
+            except Exception:
+                caption = None
+
+        if isinstance(caption, str):
+            caption = caption.strip()
+            if caption:
+                return caption
+
+        captions = getattr(table_item, "captions", None)
+        if isinstance(captions, list) and captions:
+            first = captions[0]
+            if isinstance(first, str):
+                first = first.strip()
+                if first:
+                    return first
+
+        return None
 
     def _create_content_block(
         self,

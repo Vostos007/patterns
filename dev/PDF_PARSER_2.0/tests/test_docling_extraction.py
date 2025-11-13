@@ -420,6 +420,42 @@ class TestDoclingExtraction:
             assert table_block.bbox is not None
             assert table_block.content  # Should have some content
 
+    def test_table_without_text_uses_markdown_export(self):
+        """Fallback to Docling's table exporters when .text is empty."""
+
+        from kps.extraction.docling_extractor import DoclingExtractor
+
+        class _FakeTable:
+            obj_type = "table"
+            text = ""
+            page_number = 1
+            reading_order = 2
+            bbox = (0.0, 0.0, 10.0, 10.0)
+
+            def export_to_markdown(self, doc=None):  # noqa: D401 - simple stub
+                return "| Metric | EUR | USD |\n|--------|-----|-----|\n| Fees | -1.00 | 0.00 |"
+
+        fake_table = _FakeTable()
+
+        extractor = DoclingExtractor()
+
+        def _fake_iter(_doc):
+            yield "#/tables/0", fake_table
+
+        extractor._iter_docling_items = _fake_iter  # type: ignore[assignment]
+
+        sections = extractor._extract_sections(object())
+
+        table_blocks = [
+            block
+            for section in sections
+            for block in section.blocks
+            if block.block_type == BlockType.TABLE
+        ]
+
+        assert table_blocks, "Table block should be created even without raw text"
+        assert "Fees" in table_blocks[0].content
+
     @pytest.mark.slow
     def test_performance_10_page_extraction(self, ten_page_pdf_path):
         """

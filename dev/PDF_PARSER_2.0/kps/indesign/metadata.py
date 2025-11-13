@@ -477,9 +477,18 @@ class PlacedObjectMetadata:
             validate_normalized_coords,
             validate_ctm,
             validate_bbox_consistency,
+            validate_asset_id,
         )
 
         errors: List[str] = []
+
+        # Validate asset_id format
+        asset_id_errors = validate_asset_id(self.asset_id)
+        errors.extend(asset_id_errors)
+
+        # Validate column_id is non-negative
+        if self.column_id < 0:
+            errors.append(f"column_id must be non-negative, got {self.column_id}")
 
         # Validate normalized bbox
         norm_errors = validate_normalized_coords(self.normalized_bbox)

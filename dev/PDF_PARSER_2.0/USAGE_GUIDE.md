@@ -42,6 +42,12 @@ cd dev/PDF_PARSER_2.0
 pip install -r requirements.txt
 ```
 
+#### Доп. зависимости для DOCX/PDF
+
+- **Pandoc** — нужен для DOCX: скачайте с официального сайта и убедитесь, что бинарь `pandoc` доступен в `$PATH`.citeturn0search0
+- **WeasyPrint + системные библиотеки** — для PDF рендера требуется установленный `weasyprint` и пакеты `cairo`, `Pango`, `GDK-PixBuf` (на macOS это `brew install pango cairo gdk-pixbuf libffi`). Подробные инструкции — в официальном гайде.citeturn5search0
+- (Опционально) `pip install weasyprint markdown` — чтобы локально пересобирать HTML → PDF из сохранённых снапшотов.
+
 ### Настройка API ключей
 
 ```bash

@@ -85,6 +85,7 @@ class GlossaryTranslator:
         memory: Optional[TranslationMemory] = None,
         enable_few_shot: bool = True,
         enable_auto_suggestions: bool = True,
+        config: Optional[object] = None,  # PipelineConfig for RAG params
     ):
         """
         Initialize translator.
@@ -96,6 +97,7 @@ class GlossaryTranslator:
             memory: Translation memory for caching and learning (optional)
             enable_few_shot: Use few-shot examples in prompts (default: True)
             enable_auto_suggestions: Auto-suggest new glossary terms (default: True)
+            config: PipelineConfig with RAG parameters (optional)
         """
         self.orchestrator = orchestrator
         self.glossary = glossary_manager
@@ -103,6 +105,7 @@ class GlossaryTranslator:
         self.memory = memory
         self.enable_few_shot = enable_few_shot
         self.enable_auto_suggestions = enable_auto_suggestions
+        self.config = config
 
         # If the orchestrator already has a term validator, force strict enforcement.
         if getattr(self.orchestrator, "term_validator", None):
@@ -202,6 +205,35 @@ class GlossaryTranslator:
                 glossary_context += "\n\nПримеры хороших переводов:\n"
                 for source, target in few_shot_examples:
                     glossary_context += f"- {source} → {target}\n"
+
+        # RAG INTEGRATION - Add semantic examples
+        if (self.memory and hasattr(self.memory, 'get_rag_examples') and 
+            segments_to_translate and 
+            self.config and getattr(self.config, 'rag_enabled', True)):
+            try:
+                # Use config parameters or defaults
+                rag_limit = getattr(self.config, 'rag_examples_limit', 3)
+                min_similarity = getattr(self.config, 'rag_min_similarity', 0.75)
+                
+                # Use first segment for semantic search
+                query_text = " ".join([s.text[:100] for s in segments_to_translate[:2]])
+                
+                rag_examples = self.memory.get_rag_examples(
+                    query_text,
+                    source_language,
+                    target_language,
+                    limit=rag_limit,
+                    min_similarity=min_similarity
+                )
+                
+                if rag_examples:
+                    glossary_context += "\n\n# Контекстуально-релевантные примеры (RAG):\n"
+                    for source, target, similarity in rag_examples:
+                        glossary_context += f"- Сходство {similarity:.2f}: \"{source[:50]}...\" → \"{target[:50]}...\"\n"
+                    logger.info(f"RAG examples: {len(rag_examples)} semantic matches found (threshold: {min_similarity:.2f})")
+                
+            except Exception as e:
+                logger.warning(f"RAG lookup failed: {e}, continuing without examples")
 
         # Translate with glossary context
         batch_result = self.orchestrator.translate_batch(
