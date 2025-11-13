@@ -694,9 +694,15 @@ Translated segments:"""
             max_tokens=8000,
         )
 
-        # Extract token counts from response
-        input_tokens = response.usage.prompt_tokens
-        output_tokens = response.usage.completion_tokens
+        # Extract token counts from response (some tests omit usage)
+        usage = getattr(response, "usage", None)
+        input_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
+        output_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
+
+        if not isinstance(input_tokens, int):
+            input_tokens = 0
+        if not isinstance(output_tokens, int):
+            output_tokens = 0
 
         # Parse response
         translated_text = response.choices[0].message.content

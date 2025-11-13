@@ -136,8 +136,8 @@ class TestIDMLExportWorkflow:
         # (Would insert)
 
         # Verify existing content still present
-        assert story_xml.find(".//[@Self='paragraph.intro.001']") is not None
-        assert story_xml.find(".//[@Self='paragraph.outro.001']") is not None
+        assert story_xml.find(".//*[@Self='paragraph.intro.001']") is not None
+        assert story_xml.find(".//*[@Self='paragraph.outro.001']") is not None
 
     def test_embed_metadata_in_anchored_objects(self):
         """Test metadata embedding in anchored objects."""

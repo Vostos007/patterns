@@ -101,6 +101,19 @@ def find_injection_position(block: ContentBlock) -> int:
         return 0
 
 
+def _extract_markers_in_order(content: str) -> List[str]:
+    """
+    Return markers as they appear in content.
+
+    Args:
+        content: Text content to scan.
+
+    Returns:
+        Ordered list of asset IDs from markers.
+    """
+    return [match.group(1) for match in ASSET_MARKER_PATTERN.finditer(content)]
+
+
 def extract_existing_markers(content: str) -> Set[str]:
     """
     Extract all existing [[asset_id]] markers from content.
@@ -111,11 +124,7 @@ def extract_existing_markers(content: str) -> Set[str]:
     Returns:
         Set of asset IDs found in markers
     """
-    markers = set()
-    for match in ASSET_MARKER_PATTERN.finditer(content):
-        asset_id = match.group(1)
-        markers.add(asset_id)
-    return markers
+    return set(_extract_markers_in_order(content))
 
 
 def inject_markers_into_block(
@@ -307,11 +316,11 @@ def count_markers(document: KPSDocument) -> dict:
         section_count = 0
 
         for block in section.blocks:
-            markers = extract_existing_markers(block.content)
+            ordered_markers = _extract_markers_in_order(block.content)
 
-            if markers:
-                stats["markers_by_block"][block.block_id] = list(markers)
-                section_count += len(markers)
+            if ordered_markers:
+                stats["markers_by_block"][block.block_id] = ordered_markers
+                section_count += len(ordered_markers)
 
         if section_count > 0:
             stats["markers_by_section"][section.section_type.value] = section_count

@@ -376,7 +376,7 @@ def two_column_layout_blocks() -> list[ContentBlock]:
         ContentBlock(
             block_id="p.materials.001",
             block_type=BlockType.PARAGRAPH,
-            content="Left column paragraph 1",
+            content="Left column paragraph one",
             bbox=BBox(50, 100, 250, 150),
             page_number=0,
             reading_order=0,
@@ -384,7 +384,7 @@ def two_column_layout_blocks() -> list[ContentBlock]:
         ContentBlock(
             block_id="p.materials.002",
             block_type=BlockType.PARAGRAPH,
-            content="Left column paragraph 2",
+            content="Left column paragraph two",
             bbox=BBox(50, 160, 250, 210),
             page_number=0,
             reading_order=1,
@@ -401,7 +401,7 @@ def two_column_layout_blocks() -> list[ContentBlock]:
         ContentBlock(
             block_id="p.instructions.001",
             block_type=BlockType.PARAGRAPH,
-            content="Right column paragraph 1",
+            content="Right column paragraph one",
             bbox=BBox(280, 100, 480, 150),
             page_number=0,
             reading_order=3,
@@ -409,7 +409,7 @@ def two_column_layout_blocks() -> list[ContentBlock]:
         ContentBlock(
             block_id="p.instructions.002",
             block_type=BlockType.PARAGRAPH,
-            content="Right column paragraph 2",
+            content="Right column paragraph two",
             bbox=BBox(280, 160, 480, 210),
             page_number=0,
             reading_order=4,

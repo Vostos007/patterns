@@ -161,6 +161,9 @@ def write_xml_file(tree: ET.ElementTree, file_path: Path, pretty: bool = True) -
         InDesign is sensitive to XML formatting. For production, use pretty=False
         to avoid introducing unwanted whitespace.
     """
+    if not file_path.parent.exists():
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
     if pretty:
         _indent_xml(tree.getroot())
 

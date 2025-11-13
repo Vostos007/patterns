@@ -63,19 +63,29 @@ class Segmenter:
             List of TranslationSegment objects with encoded placeholders
         """
         segments: List[TranslationSegment] = []
-        segment_counter = 0
 
         for section in document.sections:
             for block in section.blocks:
                 # Create segment from block
-                segment = self._segment_block(block, segment_counter)
+                segment = self._segment_block(block, 0)
                 segments.append(segment)
-                segment_counter += 1
 
         # Validate
         self._validate_segments(segments, document)
 
         return segments
+
+    def segment(self, document: KPSDocument) -> List[TranslationSegment]:
+        """
+        Legacy alias to keep the older Segmenter API intact.
+
+        Args:
+            document: Document to segment.
+
+        Returns:
+            Same result as segment_document.
+        """
+        return self.segment_document(document)
 
     def _segment_block(
         self, block: ContentBlock, segment_index: int
@@ -208,6 +218,43 @@ class Segmenter:
                 segment_idx += 1
 
         return merged_doc
+
+    def merge(
+        self,
+        document: KPSDocument,
+        segments: List[TranslationSegment],
+        translated_texts: List[str],
+    ) -> KPSDocument:
+        """
+        Decode placeholders and merge translated text back into the document.
+
+        Args:
+            document: Original KPSDocument
+            segments: Original TranslationSegment objects (used for placeholders)
+            translated_texts: Raw translated segments (placeholders still encoded)
+
+        Returns:
+            Document with decoded translations merged into blocks
+        """
+        if len(segments) != len(translated_texts):
+            raise ValueError(
+                "Segment and translated_text counts must match "
+                f"({len(segments)} vs {len(translated_texts)})"
+            )
+
+        paired_segments = [
+            TranslationSegment(
+                segment_id=segment.segment_id,
+                text=translated_text,
+                placeholders=segment.placeholders,
+                doc_ref=segment.doc_ref,
+            )
+            for segment, translated_text in zip(segments, translated_texts)
+        ]
+
+        decoded_segments = self.decode_segments(paired_segments)
+        decoded_texts = [seg.text for seg in decoded_segments]
+        return self.merge_segments(decoded_texts, document)
 
     def decode_segments(
         self, segments: List[TranslationSegment]

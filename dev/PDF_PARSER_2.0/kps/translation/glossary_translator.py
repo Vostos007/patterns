@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 import logging
+import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -145,6 +146,8 @@ class GlossaryTranslator:
                     segment.text, source_language, target_language
                 )
                 if cached:
+                    cached.usage_count += 1
+                    cached.timestamp = time.time()
                     translated_segments.append(cached.translated_text)
                     cached_count += 1
                     continue

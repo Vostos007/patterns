@@ -185,7 +185,7 @@ class TestLabelPlacedObjects:
                 "labeled_count": 1,
                 "failed_count": 1,
                 "labels_applied": ["img-abcdef12-p0-occ1"],
-                "failed_labels": ["vec-12345678-p1-occ1"],
+                "failed_labels": ["vec-def456-p1-occ1"],
                 "errors": ["Object not found on page 1"]
             }
 
