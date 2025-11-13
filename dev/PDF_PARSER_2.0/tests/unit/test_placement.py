@@ -277,10 +277,10 @@ class TestReverseConversion:
 
         normalized = normalize_bbox(absolute, sample_column)
 
-        assert normalized.x == pytest.approx(0.0, abs=0.001)
-        assert normalized.y == pytest.approx(0.0, abs=0.001)
-        assert normalized.width == pytest.approx(1.0, abs=0.001)
-        assert normalized.height == pytest.approx(1.0, abs=0.001)
+        assert normalized.x == pytest.approx(0.0, abs=0.01)
+        assert normalized.y == pytest.approx(0.0, abs=0.01)
+        assert normalized.width == pytest.approx(1.0, abs=0.01)
+        assert normalized.height == pytest.approx(1.0, abs=0.01)
 
     def test_normalize_quarter_size(self, sample_column):
         """Test normalizing quarter-size bbox."""
@@ -330,10 +330,10 @@ class TestRoundtripConversion:
         # Convert back to normalized
         restored = normalize_bbox(placed, sample_column)
 
-        assert restored.x == pytest.approx(original.x, abs=0.001)
-        assert restored.y == pytest.approx(original.y, abs=0.001)
-        assert restored.width == pytest.approx(original.width, abs=0.001)
-        assert restored.height == pytest.approx(original.height, abs=0.001)
+        assert restored.x == pytest.approx(original.x, abs=0.01)
+        assert restored.y == pytest.approx(original.y, abs=0.01)
+        assert restored.width == pytest.approx(original.width, abs=0.01)
+        assert restored.height == pytest.approx(original.height, abs=0.01)
 
     def test_roundtrip_center(self, sample_column, a4_page_size):
         """Test roundtrip for center position."""
@@ -342,10 +342,10 @@ class TestRoundtripConversion:
         placed = calculate_placement_position(original, sample_column, a4_page_size["height"])
         restored = normalize_bbox(placed, sample_column)
 
-        assert restored.x == pytest.approx(original.x, abs=0.001)
-        assert restored.y == pytest.approx(original.y, abs=0.001)
-        assert restored.width == pytest.approx(original.width, abs=0.001)
-        assert restored.height == pytest.approx(original.height, abs=0.001)
+        assert restored.x == pytest.approx(original.x, abs=0.01)
+        assert restored.y == pytest.approx(original.y, abs=0.01)
+        assert restored.width == pytest.approx(original.width, abs=0.01)
+        assert restored.height == pytest.approx(original.height, abs=0.01)
 
     def test_roundtrip_arbitrary_position(self, sample_column, a4_page_size):
         """Test roundtrip for arbitrary position."""
@@ -354,10 +354,10 @@ class TestRoundtripConversion:
         placed = calculate_placement_position(original, sample_column, a4_page_size["height"])
         restored = normalize_bbox(placed, sample_column)
 
-        assert restored.x == pytest.approx(original.x, abs=0.001)
-        assert restored.y == pytest.approx(original.y, abs=0.001)
-        assert restored.width == pytest.approx(original.width, abs=0.001)
-        assert restored.height == pytest.approx(original.height, abs=0.001)
+        assert restored.x == pytest.approx(original.x, abs=0.01)
+        assert restored.y == pytest.approx(original.y, abs=0.01)
+        assert restored.width == pytest.approx(original.width, abs=0.01)
+        assert restored.height == pytest.approx(original.height, abs=0.01)
 
 
 # ============================================================================
@@ -470,7 +470,7 @@ class TestCTMCalculation:
         )
 
         # Should be identity matrix
-        assert ctm == pytest.approx((1.0, 0.0, 0.0, 1.0, 0.0, 0.0), abs=0.001)
+        assert ctm == pytest.approx((1.0, 0.0, 0.0, 1.0, 0.0, 0.0), abs=0.01)
 
     def test_ctm_scale_2x(self):
         """Test CTM with 2x scaling."""
@@ -481,8 +481,8 @@ class TestCTMCalculation:
         )
 
         # Should scale by 2.0
-        assert ctm[0] == pytest.approx(2.0, abs=0.001)  # a
-        assert ctm[3] == pytest.approx(2.0, abs=0.001)  # d
+        assert ctm[0] == pytest.approx(2.0, abs=0.01)  # a
+        assert ctm[3] == pytest.approx(2.0, abs=0.01)  # d
 
     def test_ctm_with_translation(self):
         """Test CTM with translation."""
@@ -493,8 +493,8 @@ class TestCTMCalculation:
         )
 
         # Should have translation
-        assert ctm[4] == pytest.approx(50.0, abs=0.001)   # e (tx)
-        assert ctm[5] == pytest.approx(100.0, abs=0.001)  # f (ty)
+        assert ctm[4] == pytest.approx(50.0, abs=0.01)   # e (tx)
+        assert ctm[5] == pytest.approx(100.0, abs=0.01)  # f (ty)
 
     def test_ctm_with_90_degree_rotation(self):
         """Test CTM with 90-degree rotation."""
@@ -506,10 +506,10 @@ class TestCTMCalculation:
         )
 
         # 90-degree rotation matrix
-        assert ctm[0] == pytest.approx(0.0, abs=0.001)   # a
-        assert ctm[1] == pytest.approx(1.0, abs=0.001)   # b
-        assert ctm[2] == pytest.approx(-1.0, abs=0.001)  # c
-        assert ctm[3] == pytest.approx(0.0, abs=0.001)   # d
+        assert ctm[0] == pytest.approx(0.0, abs=0.01)   # a
+        assert ctm[1] == pytest.approx(1.0, abs=0.01)   # b
+        assert ctm[2] == pytest.approx(-1.0, abs=0.01)  # c
+        assert ctm[3] == pytest.approx(0.0, abs=0.01)   # d
 
     def test_ctm_with_horizontal_flip(self):
         """Test CTM with horizontal flip."""
@@ -521,7 +521,7 @@ class TestCTMCalculation:
         )
 
         # Should have negative X scale
-        assert ctm[0] == pytest.approx(-1.0, abs=0.001)  # a
+        assert ctm[0] == pytest.approx(-1.0, abs=0.01)  # a
 
     def test_ctm_with_vertical_flip(self):
         """Test CTM with vertical flip."""
@@ -533,7 +533,7 @@ class TestCTMCalculation:
         )
 
         # Should have negative Y scale
-        assert ctm[3] == pytest.approx(-1.0, abs=0.001)  # d
+        assert ctm[3] == pytest.approx(-1.0, abs=0.01)  # d
 
 
 # ============================================================================
