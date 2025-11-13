@@ -6,6 +6,8 @@ import pytest
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+XML_NS = {"xml": "http://www.w3.org/XML/1998/namespace"}
+
 
 # Sample TMX content for testing (TMX 1.4b format)
 SAMPLE_TMX = """<?xml version="1.0" encoding="UTF-8"?>
@@ -64,12 +66,12 @@ class TestTMXParsing:
         first_tu = body.find("tu")
 
         # Extract RU segment
-        ru_tuv = first_tu.find("tuv[@xml:lang='ru']")
+        ru_tuv = first_tu.find("tuv[@xml:lang='ru']", namespaces=XML_NS)
         ru_seg = ru_tuv.find("seg")
         assert ru_seg.text == "Провязать лицевую петлю"
 
         # Extract EN segment
-        en_tuv = first_tu.find("tuv[@xml:lang='en']")
+        en_tuv = first_tu.find("tuv[@xml:lang='en']", namespaces=XML_NS)
         en_seg = en_tuv.find("seg")
         assert en_seg.text == "Work a knit stitch"
 

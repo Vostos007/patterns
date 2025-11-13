@@ -521,7 +521,7 @@ class TestMetadataEdgeCases:
         """Test metadata with identity transformation."""
         normalized_bbox = NormalizedBBox(x=0.0, y=0.0, width=1.0, height=1.0)
         metadata = PlacedObjectMetadata(
-            asset_id="img-identity-p0-occ1",
+            asset_id="img-abcdef12-p0-occ1",
             column_id=0,
             normalized_bbox=normalized_bbox,
             ctm=(1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
@@ -539,7 +539,7 @@ class TestMetadataEdgeCases:
 
         normalized_bbox = NormalizedBBox(x=0.1, y=0.1, width=0.8, height=0.8)
         metadata = PlacedObjectMetadata(
-            asset_id="img-rotated-p0-occ1",
+            asset_id="img-abcdef34-p0-occ1",
             column_id=0,
             normalized_bbox=normalized_bbox,
             ctm=(cos_a, sin_a, -sin_a, cos_a, 0.0, 0.0)
@@ -552,7 +552,7 @@ class TestMetadataEdgeCases:
         """Test metadata with scaled transformation."""
         normalized_bbox = NormalizedBBox(x=0.2, y=0.2, width=0.6, height=0.6)
         metadata = PlacedObjectMetadata(
-            asset_id="img-scaled-p0-occ1",
+            asset_id="img-abcdef56-p0-occ1",
             column_id=0,
             normalized_bbox=normalized_bbox,
             ctm=(2.0, 0.0, 0.0, 2.0, 0.0, 0.0)  # 2x scale

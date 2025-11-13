@@ -282,6 +282,7 @@ class DocumentDaemon:
         target_languages: List[str] = None,
         check_interval: int = 300,  # 5 минут
         pipeline_config: PipelineConfig = None,
+        state_file: Optional[Path] = None,
     ):
         """
         Инициализация daemon.
@@ -309,7 +310,7 @@ class DocumentDaemon:
         self.pipeline = UnifiedPipeline(pipeline_config or PipelineConfig())
 
         # State management
-        self.state_file = Path("data/daemon_state.txt")
+        self.state_file = Path(state_file) if state_file else Path("data/daemon_state.txt")
         self.processed_hashes = self._load_state()
 
         # Statistics

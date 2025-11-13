@@ -112,7 +112,7 @@ class TestJSXRunnerBasicExecution:
             result = runner.execute_script(
                 Path("/tmp/script.jsx"),
                 document_path="/path/to/doc.indd",
-                asset_id="img-abc123-p0-occ1",
+            asset_id="img-abcdef12-p0-occ1",
                 bbox=[100, 200, 300, 400]
             )
 
@@ -133,14 +133,14 @@ class TestLabelPlacedObjects:
         manifest = {
             "assets": [
                 {
-                    "asset_id": "img-abc123-p0-occ1",
+                    "asset_id": "img-abcdef12-p0-occ1",
                     "asset_type": "image",
                     "file_path": "assets/img-abc123.png",
                     "bbox": [100, 200, 300, 400],
                     "page_number": 0
                 },
                 {
-                    "asset_id": "vec-def456-p1-occ1",
+                    "asset_id": "vec-12345678-p1-occ1",
                     "asset_type": "vector",
                     "file_path": "assets/vec-def456.pdf",
                     "bbox": [150, 250, 350, 450],
@@ -162,7 +162,7 @@ class TestLabelPlacedObjects:
                 "success": True,
                 "labeled_count": 2,
                 "failed_count": 0,
-                "labels_applied": ["img-abc123-p0-occ1", "vec-def456-p1-occ1"]
+                "labels_applied": ["img-abcdef12-p0-occ1", "vec-12345678-p1-occ1"]
             }
 
             result = runner.label_placed_objects(
@@ -184,8 +184,8 @@ class TestLabelPlacedObjects:
                 "success": True,
                 "labeled_count": 1,
                 "failed_count": 1,
-                "labels_applied": ["img-abc123-p0-occ1"],
-                "failed_labels": ["vec-def456-p1-occ1"],
+                "labels_applied": ["img-abcdef12-p0-occ1"],
+                "failed_labels": ["vec-12345678-p1-occ1"],
                 "errors": ["Object not found on page 1"]
             }
 
@@ -240,13 +240,13 @@ class TestExtractLabels:
 
         mock_labels = [
             {
-                "asset_id": "img-abc123-p0-occ1",
+                "asset_id": "img-abcdef12-p0-occ1",
                 "bbox": [100, 200, 300, 400],
                 "page_number": 0,
                 "object_type": "Rectangle"
             },
             {
-                "asset_id": "vec-def456-p1-occ1",
+                "asset_id": "vec-12345678-p1-occ1",
                 "bbox": [150, 250, 350, 450],
                 "page_number": 1,
                 "object_type": "GraphicLine"
@@ -257,9 +257,9 @@ class TestExtractLabels:
             labels = runner.extract_labels(Path("/tmp/test.indd"))
 
             assert len(labels) == 2
-            assert labels[0]["asset_id"] == "img-abc123-p0-occ1"
+            assert labels[0]["asset_id"] == "img-abcdef12-p0-occ1"
             assert labels[0]["bbox"] == [100, 200, 300, 400]
-            assert labels[1]["asset_id"] == "vec-def456-p1-occ1"
+            assert labels[1]["asset_id"] == "vec-12345678-p1-occ1"
 
     def test_extract_labels_no_labels_found(self):
         """Test extraction when no labels exist."""
@@ -283,9 +283,9 @@ class TestExtractLabels:
         runner = JSXRunner()
 
         mock_labels = [
-            {"asset_id": "img-abc12345-p0-occ1", "bbox": [100, 200, 300, 400]},
-            {"asset_id": "vec-def67890-p1-occ2", "bbox": [150, 250, 350, 450]},
-            {"asset_id": "tbl-ghi11223-p2-occ1", "bbox": [200, 300, 400, 500]}
+            {"asset_id": "img-abcdef12-p0-occ1", "bbox": [100, 200, 300, 400]},
+            {"asset_id": "vec-12345678-p1-occ2", "bbox": [150, 250, 350, 450]},
+            {"asset_id": "tbl-fedcba98-p2-occ1", "bbox": [200, 300, 400, 500]}
         ]
 
         with patch.object(runner, 'extract_labels', return_value=mock_labels):
@@ -313,7 +313,7 @@ class TestLabelExtractRoundtrip:
         """Create manifest with multiple assets."""
         manifest = {
             "assets": [
-                {"asset_id": f"img-asset00{i}-p{i%2}-occ1", "bbox": [100*i, 200*i, 300*i, 400*i]}
+                {"asset_id": f"img-{i:08x}-p{i%2}-occ1", "bbox": [100*i, 200*i, 300*i, 400*i]}
                 for i in range(5)
             ]
         }

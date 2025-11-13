@@ -7,6 +7,8 @@ from pathlib import Path
 import tempfile
 from xml.etree import ElementTree as ET
 
+XML_NS = {"xml": "http://www.w3.org/XML/1998/namespace"}
+
 
 # Sample TBX content for testing
 SAMPLE_TBX = """<?xml version="1.0" encoding="UTF-8"?>
@@ -73,12 +75,12 @@ class TestTBXParsing:
         first_entry = body.find("termEntry")
 
         # Extract RU term
-        ru_langset = first_entry.find("langSet[@xml:lang='ru']")
+        ru_langset = first_entry.find("langSet[@xml:lang='ru']", namespaces=XML_NS)
         ru_term = ru_langset.find(".//term")
         assert ru_term.text == "лицевая петля"
 
         # Extract EN term
-        en_langset = first_entry.find("langSet[@xml:lang='en']")
+        en_langset = first_entry.find("langSet[@xml:lang='en']", namespaces=XML_NS)
         en_term = en_langset.find(".//term")
         assert en_term.text == "knit stitch"
 
@@ -219,7 +221,7 @@ class TestTBXEdgeCases:
         root = ET.fromstring(multi_term_tbx)
         body = root.find(".//body")
         first_entry = body.find("termEntry")
-        ru_langset = first_entry.find("langSet[@xml:lang='ru']")
+        ru_langset = first_entry.find("langSet[@xml:lang='ru']", namespaces=XML_NS)
         ru_terms = ru_langset.findall(".//term")
         assert len(ru_terms) == 2
         assert ru_terms[0].text == "вариант1"

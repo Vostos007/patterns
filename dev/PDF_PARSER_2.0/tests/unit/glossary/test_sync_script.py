@@ -5,6 +5,7 @@ import yaml
 from kps.translation.glossary.manager import GlossaryManager
 
 import subprocess
+import sys
 
 
 def run_sync(tmp_path: Path):
@@ -22,7 +23,7 @@ def run_sync(tmp_path: Path):
         encoding="utf-8",
     )
     dest = tmp_path / "glossaries/knitting_custom.yaml"
-    venv_python = Path(__file__).resolve().parents[3] / ".venv/bin/python"
+    venv_python = Path(sys.executable)
     cmd = [
         str(venv_python),
         str(Path(__file__).resolve().parents[3] / "scripts/sync_glossary.py"),
