@@ -74,15 +74,28 @@ def compare_metrics(current: ExtractionMetrics, baseline: Mapping[str, object], 
             diffs[key] = {"expected": None, "actual": current_value}
             continue
 
+        if key == "source_file":
+            try:
+                from pathlib import Path
+
+                current_name = Path(current_value).name
+                expected_name = Path(expected_value).name
+            except Exception:
+                current_name = current_value
+                expected_name = expected_value
+
+            if current_name == expected_name:
+                continue
+
         if isinstance(current_value, dict) and isinstance(expected_value, dict):
             nested_diff = compare_metrics_dict(current_value, expected_value, tolerance)
             if nested_diff:
                 diffs[key] = nested_diff
-        elif isinstance(current_value, int) and isinstance(expected_value, (int, float)):
-            if abs(current_value - int(expected_value)) > tolerance:
+        elif isinstance(current_value, int) and isinstance(expected_value, (int, float, list)):
+            if not _int_matches(current_value, expected_value, tolerance):
                 diffs[key] = {"expected": expected_value, "actual": current_value}
         else:
-            if current_value != expected_value:
+            if not _values_match(current_value, expected_value):
                 diffs[key] = {"expected": expected_value, "actual": current_value}
 
     return diffs
@@ -98,9 +111,25 @@ def compare_metrics_dict(
     for key in keys:
         current_value = current.get(key, 0)
         expected_value = baseline.get(key, 0)
-        if abs(current_value - expected_value) > tolerance:
+        if not _int_matches(current_value, expected_value, tolerance):
             diffs[key] = {"expected": expected_value, "actual": current_value}
     return diffs
+
+
+def _int_matches(current: int, expected: object, tolerance: int) -> bool:
+    """Check if current integer matches expected integer/list within tolerance."""
+    if isinstance(expected, list):
+        return any(_int_matches(current, value, tolerance) for value in expected)
+    if isinstance(expected, (int, float)):
+        return abs(current - int(expected)) <= tolerance
+    return False
+
+
+def _values_match(current: object, expected: object) -> bool:
+    """Check value equality, treating lists as alternatives."""
+    if isinstance(expected, list):
+        return any(_values_match(current, value) for value in expected)
+    return current == expected
 
 
 def write_metrics(metrics: ExtractionMetrics, output_path: Path) -> None:

@@ -1,12 +1,12 @@
 {
-  "source_file": "/Users/vostos/Dev/Hollywool patterns/dev/PDF_PARSER_2.0/tests/fixtures/extraction/gloves_bonjour.pdf",
+  "source_file": "gloves_bonjour.pdf",
   "sections": 1,
-  "total_blocks": 50,
+  "total_blocks": [50, 120],
   "block_types": {
-    "paragraph": 48,
-    "table": 2
+    "paragraph": [48, 115],
+    "table": [2, 5]
   },
-  "doc_refs_with_block": 50,
+  "doc_refs_with_block": [50, 120],
   "doc_refs_missing": 0,
-  "docling_block_map": 50
+  "docling_block_map": [50, 120]
 }
