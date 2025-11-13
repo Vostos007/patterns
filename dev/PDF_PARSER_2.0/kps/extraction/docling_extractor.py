@@ -33,6 +33,10 @@ logger = logging.getLogger(__name__)
 class DoclingExtractionError(Exception):
     """Raised when Docling extraction fails."""
 
+
+class ExtractionError(DoclingExtractionError):
+    """Backward-compatible extraction exception used in tests."""
+
     pass
 
 
@@ -232,8 +236,12 @@ class DoclingExtractor:
             return kps_doc
 
         except Exception as e:
-            logger.error(f"Docling extraction failed: {e}")
-            raise DoclingExtractionError(f"Failed to extract document: {e}") from e
+            logger.error(f"Docling extraction failed for {pdf_path}: {e}")
+            raise ExtractionError(f"Failed to extract {pdf_path}: {e}") from e
+
+    def extract(self, pdf_path: Path) -> KPSDocument:
+        """Legacy alias used by tests."""
+        return self.extract_document(pdf_path, slug=pdf_path.stem)
 
     def _extract_metadata(
         self, docling_doc: DoclingDocument, pdf_path: Path

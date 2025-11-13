@@ -29,10 +29,12 @@ References:
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Optional, Tuple, Dict
 import math
 
 from ..core.assets import Asset, AssetLedger
+from ..core.assets import AssetType
 from ..core.document import KPSDocument, ContentBlock
 from ..core.bbox import BBox, NormalizedBBox
 from .columns import Column, detect_columns, find_asset_column
@@ -535,11 +537,91 @@ def validate_geometry_preservation(
         return False, 1.0
 
 
+class AssetAnchorer:
+    """Facade exposing anchoring helpers for the unit tests."""
+
+    def __init__(self, prefer_below: bool = True):
+        self.prefer_below = prefer_below
+
+    def find_anchor_block(
+        self,
+        asset: Asset,
+        blocks: List[ContentBlock],
+        column_threshold: float = 0.5,
+    ) -> Optional[ContentBlock]:
+        column = None
+        try:
+            columns = detect_columns(blocks)
+            column = find_asset_column(asset.bbox, columns, threshold=column_threshold)
+        except ValueError:
+            column = None
+
+        return find_nearest_block(
+            asset,
+            blocks,
+            same_column=column,
+            prefer_below=self.prefer_below,
+        )
+
+    def set_anchor(self, asset: Asset, block: ContentBlock) -> None:
+        asset.anchor_to = block.block_id
+
+    def normalize_bbox(self, bbox: BBox, column_bounds: BBox) -> NormalizedBBox:
+        fake_asset = Asset(
+            asset_id="asset-placeholder",
+            asset_type=AssetType.IMAGE,
+            sha256="0" * 64,
+            page_number=0,
+            bbox=bbox,
+            ctm=(1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+            file_path=Path("/tmp/placeholder.png"),
+            occurrence=1,
+            anchor_to="",
+            image_width=1,
+            image_height=1,
+        )
+        column = Column(
+            column_id=0,
+            x_min=column_bounds.x0,
+            x_max=column_bounds.x1,
+            y_min=column_bounds.y0,
+            y_max=column_bounds.y1,
+        )
+        return compute_normalized_bbox(fake_asset, column)
+
+    def check_geometry_preservation(
+        self,
+        original_bbox: BBox,
+        placed_bbox: BBox,
+        column_bounds: BBox,
+        tolerance_pt: float = 2.0,
+        tolerance_pct: float = 0.01,
+    ) -> bool:
+        max_dim = max(original_bbox.width, original_bbox.height, 1.0)
+
+        displacement = max(
+            abs(placed_bbox.x0 - original_bbox.x0),
+            abs(placed_bbox.x1 - original_bbox.x1),
+            abs(placed_bbox.y0 - original_bbox.y0),
+            abs(placed_bbox.y1 - original_bbox.y1),
+        )
+
+        tolerance = max(tolerance_pt, tolerance_pct * max_dim)
+
+        if not (column_bounds.x0 <= placed_bbox.x0 <= column_bounds.x1):
+            return False
+        if not (column_bounds.y0 <= placed_bbox.y0 <= column_bounds.y1):
+            return False
+
+        return displacement <= tolerance
+
+
 # Export public API
 __all__ = [
     "compute_normalized_bbox",
     "find_nearest_block",
     "anchor_assets_to_blocks",
     "validate_geometry_preservation",
+    "AssetAnchorer",
     "AnchoringReport",
 ]

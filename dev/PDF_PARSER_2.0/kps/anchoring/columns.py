@@ -160,13 +160,13 @@ def detect_columns(
     """
     # Validation
     if not blocks:
-        raise ValueError("Empty blocks list provided to detect_columns()")
+        return []
 
     # Filter blocks with valid bboxes
     blocks_with_bbox = [b for b in blocks if b.bbox is not None]
 
     if not blocks_with_bbox:
-        raise ValueError("No blocks with bbox found in detect_columns()")
+        return []
 
     # Edge case: single block
     if len(blocks_with_bbox) == 1:
@@ -232,6 +232,20 @@ def detect_columns(
 
     # Edge case: all blocks were noise or filtered out
     if not columns:
+        if noise_blocks:
+            fallback_columns: List[Column] = []
+            for idx, block in enumerate(noise_blocks):
+                fallback_columns.append(
+                    Column(
+                        column_id=idx,
+                        x_min=block.bbox.x0,
+                        x_max=block.bbox.x1,
+                        y_min=block.bbox.y0,
+                        y_max=block.bbox.y1,
+                        blocks=[block],
+                    )
+                )
+            return fallback_columns
         # Fallback: create single column with all blocks
         all_blocks = blocks_with_bbox
         return [
@@ -258,7 +272,43 @@ def detect_columns(
     # Validate: ensure all blocks assigned to exactly one column
     _validate_block_assignment(blocks_with_bbox, columns)
 
+    columns.sort(key=lambda c: c.x_min)
     return columns
+
+
+class ColumnDetector:
+    """Utility wrapper exposing column detection helpers for tests."""
+
+    def __init__(self, epsilon: float = 30.0, min_points: int = 3, min_column_width: float = 50.0):
+        self.epsilon = epsilon
+        self.min_points = min_points
+        self.min_column_width = min_column_width
+
+    def detect_columns(self, blocks: List[ContentBlock]) -> List[Column]:
+        return detect_columns(
+            blocks,
+            eps=self.epsilon,
+            min_samples=self.min_points,
+            min_column_width=self.min_column_width,
+        )
+
+    def get_block_column(self, block: ContentBlock, columns: List[Column]) -> Optional[int]:
+        if block.bbox is None:
+            return None
+
+        for idx, column in enumerate(columns):
+            if column.contains_bbox(block.bbox):
+                return idx
+
+        if columns:
+            center_x = block.bbox.center[0]
+            closest_idx = min(
+                range(len(columns)),
+                key=lambda i: abs(columns[i].center_x - center_x),
+            )
+            return closest_idx
+
+        return None
 
 
 def _assign_noise_blocks(
@@ -431,3 +481,11 @@ def find_asset_column(bbox: BBox, columns: List[Column], threshold: float = 0.5)
         return best_column
 
     return None
+
+
+__all__ = [
+    "Column",
+    "detect_columns",
+    "find_asset_column",
+    "ColumnDetector",
+]
