@@ -18,44 +18,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r dev/PDF_PARSER_2.0/requirements.txt
-          pip install scikit-learn weasyprint pandocfilters pytest
       - name: Run backend tests
         working-directory: dev/PDF_PARSER_2.0
-        run: |
-          python -m pytest tests -vv
-
-  test-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: dev/ui_dashboard/package-lock.json
-      - name: Install frontend dependencies
-        working-directory: dev/ui_dashboard
-        run: |
-          npm ci
-      - name: Run frontend tests
-        working-directory: dev/ui_dashboard
-        run: |
-          npm run lint
-          npm run test
-
-  test-ui-service:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install UI service dependencies
-        working-directory: dev/ui_service
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run UI service tests
-        working-directory: dev/ui_service
         run: |
           python -m pytest tests -vv

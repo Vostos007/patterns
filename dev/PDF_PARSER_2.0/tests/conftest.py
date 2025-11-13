@@ -73,9 +73,9 @@ def russian_pattern_pdf_path(tmp_path) -> Path:
 
 
 @pytest.fixture
-def sample_russian_pattern_pdf(tmp_path) -> Path:
+def sample_russian_pattern_pdf(russian_pattern_pdf_path) -> Path:
     """Alias for russian_pattern_pdf_path for integration tests."""
-    return russian_pattern_pdf_path(tmp_path)
+    return russian_pattern_pdf_path
 
 
 @pytest.fixture

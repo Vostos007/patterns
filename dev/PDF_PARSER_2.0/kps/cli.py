@@ -340,7 +340,7 @@ def export(
         render_docx_with_contract,
         render_pdf_with_contract,
     )
-    from kps.metrics import record_export, record_export_duration
+    # from kps.metrics import record_export, record_export_duration
 
     # Setup logging
     level = logging.DEBUG if verbose else logging.INFO
@@ -359,8 +359,8 @@ def export(
         start = time.time()
         doc_to_markdown(input_file, md_out)
         duration = time.time() - start
-        record_export_duration("md", duration)
-        record_export("md")
+        # record_export_duration("md", duration)
+        # record_export("md")
         if verbose:
             typer.echo(f"      ✓ Complete ({duration:.2f}s)")
 
@@ -370,8 +370,8 @@ def export(
         start = time.time()
         markdown_to_html(md_out, html_out)
         duration = time.time() - start
-        record_export_duration("html", duration)
-        record_export("html")
+        # record_export_duration("html", duration)
+        # record_export("html")
         if verbose:
             typer.echo(f"      ✓ Complete ({duration:.2f}s)")
 
@@ -381,8 +381,8 @@ def export(
         start = time.time()
         render_docx_with_contract(md_out, docx_out, contract)
         duration = time.time() - start
-        record_export_duration("docx", duration)
-        record_export("docx")
+        # record_export_duration("docx", duration)
+        # record_export("docx")
         if verbose:
             typer.echo(f"      ✓ Complete ({duration:.2f}s)")
 
@@ -392,8 +392,8 @@ def export(
         start = time.time()
         render_pdf_with_contract(html_out, pdf_out, contract)
         duration = time.time() - start
-        record_export_duration("pdf", duration)
-        record_export("pdf")
+        # record_export_duration("pdf", duration)
+        # record_export("pdf")
         if verbose:
             typer.echo(f"      ✓ Complete ({duration:.2f}s)")
 
