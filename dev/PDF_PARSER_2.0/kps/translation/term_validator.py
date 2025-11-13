@@ -183,6 +183,25 @@ class TermValidator:
 
         return violations
 
+    def _contains_term(self, text: str, term: str) -> bool:
+        """
+        Check if text contains term as a whole word.
+        
+        Uses word boundary matching to avoid partial matches.
+        
+        Args:
+            text: Text to search in (already lowercased)
+            term: Term to search for
+            
+        Returns:
+            True if term found as whole word
+        """
+        if not term:
+            return False
+            
+        pattern = re.compile(r'\b' + re.escape(term.lower()) + r'\b')
+        return bool(pattern.search(text))
+
     def enforce(
         self,
         src_text: str,

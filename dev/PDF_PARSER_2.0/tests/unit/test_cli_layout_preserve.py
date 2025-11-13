@@ -29,7 +29,7 @@ def test_layout_preserve_invokes_process(monkeypatch, tmp_path):
 
     called = {}
 
-    def fake_process(input_path, out_dir, target_langs):  # noqa: ANN001
+    def fake_process(input_path, out_dir, target_langs, preserve_formatting=False):  # noqa: ANN001
         out_dir.mkdir(parents=True, exist_ok=True)
         produced = out_dir / "foo_en.pdf"
         produced.write_text("dummy")

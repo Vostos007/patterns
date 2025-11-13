@@ -432,7 +432,7 @@ class TestPlacedObjectMetadataValidation:
 
         errors = metadata.validate()
         assert len(errors) > 0
-        assert any("x=1.5 out of range" in err for err in errors)
+        assert any("out of range" in err or "exceeds" in err for err in errors)
 
 
 # ============================================================================

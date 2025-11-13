@@ -59,6 +59,11 @@ class TestDocumentDaemon:
 
     def test_initialization(self, temp_dirs):
         """Test daemon initialization."""
+        # Override state file to empty for clean test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         daemon = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
@@ -66,6 +71,7 @@ class TestDocumentDaemon:
             target_languages=["en"],
             check_interval=60,
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         assert daemon.inbox == temp_dirs["inbox"]
         assert daemon.output == temp_dirs["output"]
@@ -122,10 +128,16 @@ class TestDocumentDaemon:
 
     def test_find_new_documents_ignores_processed(self, temp_dirs, mock_pipeline):
         """Test that processed documents are ignored."""
+        # Use clean state file for this test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         daemon = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         # Create test file
         pdf = temp_dirs["inbox"] / "doc.pdf"
@@ -147,12 +159,12 @@ class TestDocumentDaemon:
         """Test state persistence."""
         state_file = temp_dirs["data"] / "daemon_state.txt"
 
-        # Create daemon and add some hashes
+        # Create daemon with clean state
         daemon1 = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
         )
-        daemon1.state_file = state_file
+        daemon1.state_file = state_file  # Override to use our test state file
 
         daemon1.processed_hashes.add("hash1")
         daemon1.processed_hashes.add("hash2")
@@ -172,11 +184,17 @@ class TestDocumentDaemon:
 
     def test_process_document_success(self, temp_dirs, mock_pipeline):
         """Test successful document processing."""
+        # Use clean state file for this test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         daemon = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
             processed_dir=str(temp_dirs["processed"]),
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         # Create test file
         pdf = temp_dirs["inbox"] / "test.pdf"
@@ -229,11 +247,17 @@ class TestDocumentDaemon:
 
     def test_run_once_with_documents(self, temp_dirs, mock_pipeline):
         """Test run_once with new documents."""
+        # Use clean state file for this test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         daemon = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
             processed_dir=str(temp_dirs["processed"]),
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         # Create test files
         pdf1 = temp_dirs["inbox"] / "doc1.pdf"
@@ -251,6 +275,11 @@ class TestDocumentDaemon:
 
     def test_run_once_continues_after_error(self, temp_dirs, mock_pipeline):
         """Test that run_once continues processing after one document fails."""
+        # Use clean state file for this test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         # Make first call fail, second succeed
         mock_pipeline.process.side_effect = [
             RuntimeError("Error"),
@@ -269,6 +298,7 @@ class TestDocumentDaemon:
             output_dir=str(temp_dirs["output"]),
             processed_dir=str(temp_dirs["processed"]),
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         # Create test files
         pdf1 = temp_dirs["inbox"] / "doc1.pdf"
@@ -286,11 +316,17 @@ class TestDocumentDaemon:
 
     def test_statistics_tracking(self, temp_dirs, mock_pipeline):
         """Test that statistics are tracked correctly."""
+        # Use clean state file for this test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         daemon = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
             processed_dir=str(temp_dirs["processed"]),
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         # Create and process a document
         pdf = temp_dirs["inbox"] / "doc.pdf"
@@ -307,12 +343,18 @@ class TestDocumentDaemonIntegration:
 
     def test_full_workflow(self, temp_dirs, mock_pipeline):
         """Test complete workflow: find → process → move → state."""
+        # Use clean state file for this test
+        state_file = temp_dirs["data"] / "daemon_state.txt"
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("")  # Empty state file
+        
         daemon = DocumentDaemon(
             inbox_dir=str(temp_dirs["inbox"]),
             output_dir=str(temp_dirs["output"]),
             processed_dir=str(temp_dirs["processed"]),
             target_languages=["en", "fr"],
         )
+        daemon.state_file = state_file  # Override to use our test state file
 
         # Create test document
         pdf = temp_dirs["inbox"] / "pattern.pdf"

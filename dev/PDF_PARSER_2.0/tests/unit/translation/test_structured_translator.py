@@ -115,9 +115,9 @@ class TestStructuredTranslator:
         )
 
         # Mock Structured Outputs to return correct translation
-        with patch("openai.OpenAI") as mock_openai_class:
+        with patch("kps.translation.structured_translator.openai") as mock_openai:
             mock_client = MagicMock()
-            mock_openai_class.return_value = mock_client
+            mock_openai.OpenAI.return_value = mock_client
 
             # Mock the response
             mock_response = MagicMock()
@@ -158,9 +158,9 @@ class TestStructuredTranslator:
         )
 
         # Mock Structured Outputs to also return bad translation
-        with patch("openai.OpenAI") as mock_openai_class:
+        with patch("kps.translation.structured_translator.openai") as mock_openai:
             mock_client = MagicMock()
-            mock_openai_class.return_value = mock_client
+            mock_openai.OpenAI.return_value = mock_client
 
             mock_response = MagicMock()
             mock_response.choices[0].message.content = json.dumps(
@@ -334,9 +334,9 @@ class TestIntegration:
             translations={"en": TranslationResult("en", ["Bad translation"])},
         )
 
-        with patch("openai.OpenAI") as mock_openai_class:
+        with patch("kps.translation.structured_translator.openai") as mock_openai:
             mock_client = MagicMock()
-            mock_openai_class.return_value = mock_client
+            mock_openai.OpenAI.return_value = mock_client
             mock_response = MagicMock()
             mock_response.choices[0].message.content = json.dumps(
                 {"translation": "Work a k", "used_terms": ["k"]}
@@ -353,9 +353,9 @@ class TestIntegration:
             translations={"en": TranslationResult("en", ["Bad translation"])},
         )
 
-        with patch("openai.OpenAI") as mock_openai_class:
+        with patch("kps.translation.structured_translator.openai") as mock_openai:
             mock_client = MagicMock()
-            mock_openai_class.return_value = mock_client
+            mock_openai.OpenAI.return_value = mock_client
             # Always return bad translation
             mock_response = MagicMock()
             mock_response.choices[0].message.content = json.dumps(
