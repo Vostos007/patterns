@@ -10,9 +10,12 @@ Tests:
 6. Performance benchmarks
 """
 
+import json
 import pytest
+import sqlite3
 import tempfile
 from pathlib import Path
+from typing import List
 
 from kps.translation import (
     GlossaryTranslator,
@@ -21,6 +24,367 @@ from kps.translation import (
     SemanticTranslationMemory,
     TranslationOrchestrator,
 )
+from kps.translation.semantic_memory_pg import SemanticTranslationMemoryPG
+from kps.core.unified_pipeline import PipelineConfig, MemoryType, SemanticMemoryBackend
+from kps.clients.embeddings import EmbeddingsClient
+from scripts.reindex_semantic_memory import reindex_semantic_memory as run_reindex
+from scripts.seed_glossary_memory import seed_glossary_memory as run_seed_glossary
+
+
+class DummyRateLimitError(Exception):
+    """Mimic OpenAI 429 errors for retry testing."""
+
+    def __init__(self, message="Rate limit", status=429):
+        super().__init__(message)
+        self.status = status
+
+
+class _FakeEmbeddingsEndpoint:
+    """Fake OpenAI embeddings endpoint that can fail deterministically."""
+
+    def __init__(self, events, dimension=8, fail_on_calls=None):
+        self.events = events
+        self.dimension = dimension
+        self.fail_on_calls = fail_on_calls or set()
+        self._call_index = 0
+
+    def create(self, model, input):
+        self.events.append((model, tuple(input)))
+        call_index = self._call_index
+        self._call_index += 1
+
+        if call_index in self.fail_on_calls:
+            # Ensure subsequent retries succeed
+            self.fail_on_calls.remove(call_index)
+            raise DummyRateLimitError()
+
+        data = []
+        for idx, text in enumerate(input):
+            vec = [float(idx + len(text))] * self.dimension
+            data.append(type("EmbeddingObj", (object,), {"embedding": vec})())
+
+        return type("EmbeddingsResponse", (object,), {"data": data})()
+
+
+class _FakeOpenAIClient:
+    def __init__(self, endpoint):
+        self.embeddings = endpoint
+
+
+class TestEmbeddingsClient:
+    def test_embedding_client_round_trip(self):
+        events = []
+        fake_endpoint = _FakeEmbeddingsEndpoint(events, dimension=6)
+        fake_client = _FakeOpenAIClient(fake_endpoint)
+
+        client = EmbeddingsClient(
+            model="text-embedding-3-small",
+            max_batch=2,
+            client=fake_client,
+        )
+
+        vectors = client.create_vectors(["foo", "бар", "baz"])
+
+        assert len(vectors) == 3
+        assert all(len(vec) == 6 for vec in vectors)
+        assert events == [
+            ("text-embedding-3-small", ("foo", "бар")),
+            ("text-embedding-3-small", ("baz",)),
+        ]
+
+    def test_embedding_client_retries_on_rate_limit(self):
+        events = []
+        fake_endpoint = _FakeEmbeddingsEndpoint(events, dimension=4, fail_on_calls={0})
+        fake_client = _FakeOpenAIClient(fake_endpoint)
+
+        client = EmbeddingsClient(
+            model="text-embedding-3-small",
+            max_batch=4,
+            max_retries=2,
+            client=fake_client,
+        )
+
+        vectors = client.create_vectors(["retry-me"])
+
+        assert len(vectors) == 1
+        assert len(vectors[0]) == 4
+        # First call failed, second succeeded
+        assert len(events) == 2
+
+
+class _StubEmbeddingsClient:
+    def __init__(self, dimension=8):
+        self.dimension = dimension
+        self.calls = []
+
+    def create_vectors(self, texts):
+        self.calls.extend(texts)
+        return [[float(len(text))] * self.dimension for text in texts]
+
+
+class _FakePGCursor:
+    def __init__(self, connection):
+        self.conn = connection
+
+    def execute(self, query, params=None):
+        self.conn.executed.append((query, params))
+
+    def fetchall(self):
+        return self.conn.rows
+
+    def fetchone(self):
+        if self.conn.fetchone_rows:
+            return self.conn.fetchone_rows.pop(0)
+        return None
+
+
+class _FakePGConnection:
+    def __init__(self, rows=None, fetchone_rows=None):
+        self.rows = rows or []
+        self.fetchone_rows = fetchone_rows or []
+        self.executed: List = []
+
+    def cursor(self):
+        return _FakePGCursor(self)
+
+    def commit(self):
+        self.executed.append("commit")
+
+    def close(self):
+        pass
+
+
+class _FakeSemanticMemoryForRAG:
+    def __init__(self):
+        self.rag_calls: List[float] = []
+
+    def get_translation(self, *args, **kwargs):
+        return None
+
+    def get_few_shot_examples(self, *args, **kwargs):
+        return []
+
+    def get_rag_examples(
+        self,
+        query_text: str,
+        source_lang: str,
+        target_lang: str,
+        limit: int,
+        min_similarity: float,
+    ):
+        self.rag_calls.append(min_similarity)
+        return [(query_text, target_lang, min_similarity)]
+
+    def add_translation(self, *args, **kwargs):
+        return None
+
+    def suggest_glossary_term(self, *args, **kwargs):
+        return None
+
+    def get_glossary_suggestions(self, *args, **kwargs):
+        return []
+
+
+class _DummySemanticMemoryPG(SemanticTranslationMemoryPG):
+    def _init_db(self):
+        # Skip real DDL for tests
+        return None
+
+
+class TestSemanticMemoryEmbeddings:
+    def test_semantic_memory_persists_real_embeddings(self, tmp_path):
+        db_path = tmp_path / "semantic.db"
+        client = _StubEmbeddingsClient(dimension=6)
+        memory = SemanticTranslationMemory(
+            str(db_path),
+            use_embeddings=True,
+            embedding_cache_size=4,
+            embedding_client=client,
+            embedding_dimensions=None,
+        )
+
+        memory.add_translation(
+            "Провяжите 2 петли вместе",
+            "Knit 2 stitches together",
+            "ru",
+            "en",
+            ["k2tog"],
+        )
+
+        entry = memory.get_translation("Провяжите 2 петли вместе", "ru", "en")
+
+        assert entry is not None
+        assert entry.embedding is not None
+        assert len(entry.embedding) == 6
+        assert client.calls.count("Провяжите 2 петли вместе") == 1
+
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute("SELECT embedding FROM translations LIMIT 1").fetchone()
+        conn.close()
+        assert row[0] is not None
+        assert len(row[0]) == 6 * 4  # float32 bytes per dim
+
+    def test_embedding_cache_eviction(self, tmp_path):
+        db_path = tmp_path / "semantic_cache.db"
+        client = _StubEmbeddingsClient(dimension=3)
+        memory = SemanticTranslationMemory(
+            str(db_path),
+            use_embeddings=True,
+            embedding_cache_size=2,
+            embedding_client=client,
+            embedding_dimensions=None,
+        )
+
+        memory._get_embedding("alpha", "ru")
+        memory._get_embedding("beta", "ru")
+
+        # This should evict "alpha"
+        memory._get_embedding("gamma", "ru")
+
+        # Cache hit for beta
+        memory._get_embedding("beta", "ru")
+
+        # alpha was evicted, so fetching again triggers another API call
+        memory._get_embedding("alpha", "ru")
+
+        assert client.calls == ["alpha", "beta", "gamma", "alpha"]
+
+
+class TestSemanticMemoryCLI:
+    def test_reindex_semantic_memory_cli(self, tmp_path):
+        db_path = tmp_path / "semantic_cli.db"
+        memory = SemanticTranslationMemory(str(db_path), use_embeddings=False)
+
+        memory.add_translation("A", "A", "ru", "en", ["term_a"])
+        memory.add_translation("B", "B", "ru", "en", ["term_b"])
+
+        # Ensure rows start without embeddings
+        conn = sqlite3.connect(str(db_path))
+        before = conn.execute(
+            "SELECT COUNT(*) FROM translations WHERE IFNULL(embedding_version,0) = 0"
+        ).fetchone()[0]
+        assert before == 2
+
+        processed = run_reindex(
+            str(db_path),
+            target_version=2,
+            batch_size=1,
+            embedding_client=_StubEmbeddingsClient(dimension=4),
+        )
+
+        assert processed == 2
+
+        row = conn.execute(
+            "SELECT embedding, embedding_q16, embedding_version FROM translations LIMIT 1"
+        ).fetchone()
+        conn.close()
+
+        assert row[0] is not None
+        assert row[1] is not None
+        assert row[2] == 2
+
+
+class TestGlossarySeeder:
+    def test_seed_glossary_memory_script(self, tmp_path):
+        glossary_file = tmp_path / "glossary.yaml"
+        glossary_file.write_text(
+            """
+terms:
+  test_term:
+    ru: спец символ
+    en: special symbol
+""",
+            encoding="utf-8",
+        )
+
+        db_path = tmp_path / "seeded.db"
+        seeded = run_seed_glossary(
+            str(glossary_file),
+            str(db_path),
+            embedding_client=_StubEmbeddingsClient(dimension=4),
+        )
+
+        assert seeded == 1
+
+        memory = SemanticTranslationMemory(str(db_path), use_embeddings=False)
+        entry = memory.get_translation("спец символ", "ru", "en")
+        assert entry is not None
+        assert memory.get_metadata("glossary_seed:ru:en") is not None
+
+
+class TestPostgresSemanticMemory:
+    def test_similarity_query_has_filters_before_order(self):
+        pg = _DummySemanticMemoryPG(
+            "postgresql://dummy",
+            embedding_client=None,
+            connection_factory=lambda: _FakePGConnection(),
+        )
+        query, _ = pg._build_similarity_query(limit=5)
+        query_lower = query.lower()
+        assert query_lower.index("where") < query_lower.index("order by")
+
+    def test_find_similar_uses_embedding_client_and_threshold(self):
+        rows = [
+            (
+                "src",
+                "tgt",
+                "ru",
+                "en",
+                json.dumps(["k2tog"]),
+                5,
+                0.92,
+            ),
+            ("src2", "tgt2", "ru", "en", None, 1, 0.4),
+        ]
+        connections = iter([_FakePGConnection(rows=rows)])
+
+        def factory():
+            return next(connections)
+
+        client = _StubEmbeddingsClient(dimension=4)
+        pg = _DummySemanticMemoryPG(
+            "postgresql://dummy",
+            embedding_client=client,
+            connection_factory=factory,
+        )
+
+        similar = pg.find_similar("query", "ru", "en", threshold=0.6, limit=5)
+        assert len(similar) == 1
+        assert similar[0].entry.translated_text == "tgt"
+        assert client.calls  # ensure embeddings queried
+
+
+class TestRAGScoping:
+    def test_rag_threshold_adjusts_for_symbol_terms(self):
+        orchestrator = MockOrchestrator()
+        glossary = MockGlossary()
+        memory = _FakeSemanticMemoryForRAG()
+        config = type(
+            "Cfg",
+            (object,),
+            {
+                "rag_enabled": True,
+                "rag_examples_limit": 1,
+                "rag_min_similarity": 0.8,
+                "special_symbol_min_similarity": 0.5,
+            },
+        )()
+
+        translator = GlossaryTranslator(
+            orchestrator,
+            glossary,
+            memory=memory,
+            config=config,
+        )
+
+        segments = [
+            TranslationSegment("1", "⟨кромка⟩ держите маркер", {}),
+            TranslationSegment("2", "Провяжите 2 петли вместе", {}),
+        ]
+
+        translator.translate(segments, target_language="en", source_language="ru")
+
+        assert memory.rag_calls == [0.5, 0.8]
 from kps.translation.orchestrator import TranslationSegment
 
 
@@ -102,6 +466,16 @@ class MockGlossary:
                     "category": "structure",
                 },
             )(),
+            type(
+                "Entry",
+                (object,),
+                {
+                    "key": "special_symbol",
+                    "ru": "⟨кромка⟩",
+                    "en": "selvage marker",
+                    "category": "symbol",
+                },
+            )(),
         ]
 
     def get_all_entries(self):
@@ -114,6 +488,21 @@ class MockGlossary:
             target = getattr(entry, target_lang, "")
             context += f"- {source} → {target}\n"
         return context
+
+    def lookup(self, key, source_lang="ru", target_lang="en"):
+        for entry in self.entries:
+            if entry.key == key:
+                return type(
+                    "Match",
+                    (object,),
+                    {
+                        "key": key,
+                        "source_text": getattr(entry, source_lang, ""),
+                        "target_text": getattr(entry, target_lang, ""),
+                        "category": entry.category,
+                    },
+                )()
+        return None
 
 
 class TestBasicTranslation:
@@ -228,6 +617,36 @@ class TestTranslationMemory:
 
         assert result.cached_segments == 1  # Should use saved cache
 
+    def test_cached_source_language_entries_are_invalidated(self, tmp_path):
+        """Ensure cached Russian text is evicted and retranslated."""
+
+        cache_file = tmp_path / "cache.json"
+        orchestrator = MockOrchestrator()
+        glossary = MockGlossary()
+        memory = TranslationMemory(str(cache_file))
+
+        # Seed cache with bad translation (still Russian)
+        memory.add_translation(
+            "Провяжите 2 петли вместе",
+            "Провяжите 2 петли вместе",
+            "ru",
+            "en",
+            ["k2tog"],
+        )
+
+        translator = GlossaryTranslator(orchestrator, glossary, memory=memory)
+        segments = [TranslationSegment("1", "Провяжите 2 петли вместе", {})]
+
+        result = translator.translate(segments, target_language="en", source_language="ru")
+
+        assert result.cached_segments == 0
+        assert result.segments[0] == "Knit 2 stitches together"
+
+        # Cache should now contain the corrected translation
+        cached = memory.get_translation("Провяжите 2 петли вместе", "ru", "en")
+        assert cached is not None
+        assert cached.translated_text == "Knit 2 stitches together"
+
 
 class TestSemanticMemory:
     """Test semantic memory with similarity matching."""
@@ -236,7 +655,12 @@ class TestSemanticMemory:
         """Test exact match in semantic memory."""
         db_file = tmp_path / "semantic.db"
 
-        memory = SemanticTranslationMemory(str(db_file), use_embeddings=True)
+        memory = SemanticTranslationMemory(
+            str(db_file),
+            use_embeddings=True,
+            embedding_client=_StubEmbeddingsClient(dimension=6),
+            embedding_dimensions=None,
+        )
 
         # Add translation
         memory.add_translation(
@@ -257,7 +681,12 @@ class TestSemanticMemory:
         """Test finding similar translations."""
         db_file = tmp_path / "semantic.db"
 
-        memory = SemanticTranslationMemory(str(db_file), use_embeddings=True)
+        memory = SemanticTranslationMemory(
+            str(db_file),
+            use_embeddings=True,
+            embedding_client=_StubEmbeddingsClient(dimension=6),
+            embedding_dimensions=None,
+        )
 
         # Add original
         memory.add_translation(
@@ -280,7 +709,12 @@ class TestSemanticMemory:
         """Test RAG example retrieval."""
         db_file = tmp_path / "semantic.db"
 
-        memory = SemanticTranslationMemory(str(db_file), use_embeddings=True)
+        memory = SemanticTranslationMemory(
+            str(db_file),
+            use_embeddings=True,
+            embedding_client=_StubEmbeddingsClient(dimension=6),
+            embedding_dimensions=None,
+        )
 
         # Add several translations
         translations = [

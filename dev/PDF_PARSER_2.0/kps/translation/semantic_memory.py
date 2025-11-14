@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import sqlite3
 import time
+from collections import OrderedDict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -33,6 +35,11 @@ try:
 except ImportError:
     NUMPY_AVAILABLE = False
     np = None
+
+from kps.clients.embeddings import EmbeddingsClient
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -103,6 +110,8 @@ class SemanticTranslationMemory:
         db_path: str,
         use_embeddings: bool = True,
         embedding_cache_size: int = 1000,
+        embedding_client: Optional[EmbeddingsClient] = None,
+        embedding_dimensions: Optional[int] = 1536,
     ):
         """
         Инициализация семантической памяти.
@@ -113,12 +122,25 @@ class SemanticTranslationMemory:
             embedding_cache_size: Размер кэша embeddings в памяти
         """
         self.db_path = Path(db_path)
-        self.use_embeddings = use_embeddings and NUMPY_AVAILABLE
+        self.embedding_client = embedding_client
+        self.embedding_dimensions = embedding_dimensions
+
+        if use_embeddings and not NUMPY_AVAILABLE:
+            logger.warning("NumPy unavailable. Semantic embeddings disabled.")
+
+        if use_embeddings and embedding_client is None:
+            logger.warning(
+                "Embedding client not provided. Semantic embeddings disabled until client is set."
+            )
+
+        self.use_embeddings = (
+            use_embeddings and NUMPY_AVAILABLE and embedding_client is not None
+        )
         self.embedding_cache_size = embedding_cache_size
 
         # In-memory кэш для быстрого доступа
         self.cache: Dict[str, SemanticEntry] = {}
-        self.embedding_cache: Dict[str, np.ndarray] = {}
+        self.embedding_cache: "OrderedDict[str, np.ndarray]" = OrderedDict()
 
         # Инициализация БД
         self._init_database()
@@ -148,10 +170,34 @@ class SemanticTranslationMemory:
                 usage_count INTEGER DEFAULT 1,
                 quality_score REAL DEFAULT 1.0,
                 embedding BLOB,  -- Numpy array as bytes
+                embedding_q16 BLOB,  -- Quantized embedding
+                embedding_version INTEGER DEFAULT 0,
                 context TEXT,
                 created_at REAL DEFAULT (datetime('now'))
             )
         """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """
+        )
+
+        self._ensure_column(
+            cursor,
+            "translations",
+            "embedding_q16",
+            "ALTER TABLE translations ADD COLUMN embedding_q16 BLOB",
+        )
+        self._ensure_column(
+            cursor,
+            "translations",
+            "embedding_version",
+            "ALTER TABLE translations ADD COLUMN embedding_version INTEGER DEFAULT 0",
         )
 
         # Индексы для быстрого поиска
@@ -195,6 +241,16 @@ class SemanticTranslationMemory:
 
         conn.commit()
         conn.close()
+
+    def _ensure_column(
+        self, cursor: sqlite3.Cursor, table: str, column: str, ddl: str
+    ) -> None:
+        """Ensure optional columns exist for backward compatibility."""
+
+        cursor.execute(f"PRAGMA table_info({table})")
+        cols = [row[1] for row in cursor.fetchall()]
+        if column not in cols:
+            cursor.execute(ddl)
 
     def _warm_up_cache(self) -> None:
         """Загрузить популярные записи в кэш."""
@@ -255,8 +311,15 @@ class SemanticTranslationMemory:
 
         # Вычислить embedding
         embedding = None
+        embedding_bytes = None
+        embedding_q16 = None
+        embedding_version_value = 0
         if self.use_embeddings:
             embedding = self._get_embedding(source_text, source_lang)
+            if embedding is not None:
+                embedding_bytes = self._embedding_to_bytes(embedding)
+                embedding_q16 = self._quantize_embedding(embedding)
+                embedding_version_value = 1
 
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
@@ -267,8 +330,9 @@ class SemanticTranslationMemory:
                 """
                 INSERT INTO translations
                 (hash, source_text, translated_text, source_lang, target_lang,
-                 glossary_terms, timestamp, quality_score, embedding, context)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 glossary_terms, timestamp, quality_score, embedding, embedding_q16,
+                 embedding_version, context)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     key,
@@ -279,7 +343,9 @@ class SemanticTranslationMemory:
                     json.dumps(glossary_terms),
                     time.time(),
                     quality_score,
-                    self._embedding_to_bytes(embedding) if embedding is not None else None,
+                    embedding_bytes,
+                    embedding_q16,
+                    embedding_version_value,
                     context,
                 ),
             )
@@ -367,6 +433,33 @@ class SemanticTranslationMemory:
             return entry
 
         return None
+
+    def delete_translation(
+        self,
+        source_text: str,
+        source_lang: str,
+        target_lang: str,
+        glossary_version: Optional[int] = None,
+        model: Optional[str] = None,
+    ) -> None:
+        """Удалить запись перевода из базы и из in-memory кэшей."""
+
+        key = self._make_key(
+            source_text,
+            source_lang,
+            target_lang,
+            glossary_version=glossary_version,
+            model=model,
+        )
+
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM translations WHERE hash = ?", (key,))
+        conn.commit()
+        conn.close()
+
+        self.cache.pop(key, None)
+        self.embedding_cache.pop(key, None)
 
     def find_similar(
         self,
@@ -625,47 +718,68 @@ class SemanticTranslationMemory:
         return suggestions
 
     def _get_embedding(self, text: str, lang: str) -> Optional[np.ndarray]:
-        """
-        Получить embedding для текста.
+        """Получить embedding для текста через EmbeddingsClient."""
 
-        Использует простую симуляцию embeddings.
-        В продакшене нужно использовать sentence-transformers.
-
-        Args:
-            text: Текст
-            lang: Язык
-
-        Returns:
-            Numpy array или None
-        """
         if not self.use_embeddings or not NUMPY_AVAILABLE:
             return None
 
-        # Проверить кэш
         cache_key = f"{lang}:{text}"
-        if cache_key in self.embedding_cache:
-            return self.embedding_cache[cache_key]
+        cached = self.embedding_cache.get(cache_key)
+        if cached is not None:
+            self.embedding_cache.move_to_end(cache_key)
+            return cached
 
-        # УПРОЩЁННАЯ СИМУЛЯЦИЯ embeddings
-        # В продакшене использовать: sentence-transformers
-        # from sentence_transformers import SentenceTransformer
-        # model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-        # embedding = model.encode(text)
+        if not self.embedding_client:
+            return None
 
-        # Для демо: простое хеширование в вектор
-        hash_bytes = hashlib.sha256(text.lower().encode()).digest()
-        # Преобразовать в вектор 384 измерений (стандарт для sentence-BERT)
-        embedding = np.frombuffer(hash_bytes, dtype=np.uint8)
-        # Повторить до 384 измерений
-        embedding = np.tile(embedding, (384 // len(embedding) + 1))[:384]
-        # Нормализовать
-        embedding = embedding.astype(np.float32) / 255.0
+        vectors = self.embedding_client.create_vectors([text])
+        if not vectors:
+            return None
 
-        # Добавить в кэш
-        if len(self.embedding_cache) < self.embedding_cache_size:
-            self.embedding_cache[cache_key] = embedding
+        vector = np.asarray(vectors[0], dtype=np.float32)
 
-        return embedding
+        if self.embedding_dimensions is None:
+            self.embedding_dimensions = len(vector)
+        elif len(vector) != self.embedding_dimensions:
+            raise ValueError(
+                f"Embedding dimension mismatch: expected {self.embedding_dimensions}, got {len(vector)}"
+            )
+
+        self._cache_embedding(cache_key, vector)
+        return vector
+
+    def _cache_embedding(self, key: str, value: np.ndarray) -> None:
+        if self.embedding_cache_size <= 0:
+            return
+
+        if key in self.embedding_cache:
+            self.embedding_cache.move_to_end(key)
+        self.embedding_cache[key] = value
+
+        while len(self.embedding_cache) > self.embedding_cache_size:
+            self.embedding_cache.popitem(last=False)
+
+    def get_metadata(self, key: str) -> Optional[str]:
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM metadata WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        conn.close()
+        return row[0] if row else None
+
+    def set_metadata(self, key: str, value: str) -> None:
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO metadata(key, value)
+            VALUES(?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+            """,
+            (key, value),
+        )
+        conn.commit()
+        conn.close()
 
     def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """
@@ -689,11 +803,18 @@ class SemanticTranslationMemory:
         # Преобразовать в 0.0-1.0
         return float((similarity + 1.0) / 2.0)
 
-    def _embedding_to_bytes(self, embedding: np.ndarray) -> bytes:
+    @staticmethod
+    def _embedding_to_bytes(embedding: np.ndarray) -> bytes:
         """Преобразовать embedding в bytes для SQLite."""
         return embedding.astype(np.float32).tobytes()
 
-    def _bytes_to_embedding(self, data: bytes) -> np.ndarray:
+    @staticmethod
+    def _quantize_embedding(embedding: np.ndarray) -> bytes:
+        """Quantize embedding to float16 for compact storage."""
+        return embedding.astype(np.float16).tobytes()
+
+    @staticmethod
+    def _bytes_to_embedding(data: bytes) -> np.ndarray:
         """Преобразовать bytes в embedding."""
         return np.frombuffer(data, dtype=np.float32)
 
@@ -711,6 +832,8 @@ class SemanticTranslationMemory:
             usage_count,
             quality_score,
             embedding_bytes,
+            _embedding_q16_bytes,
+            _embedding_version,
             context,
             created_at,
         ) = row

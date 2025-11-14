@@ -474,6 +474,15 @@ orientation:
     note: Side of fabric that is inside/hidden (typically even rows).
     protected_tokens:
     - WS
+  ряд / круг (ряд в круговом вязании):
+    ru: ряд / круг
+    en: row / round
+    fr: rang / tour
+    note: Single pass of stitches; for circular knitting use "round (rnd)".
+    protected_tokens:
+    - row
+    - round
+    - rnd
 finishing:
   блокировка / парообработка:
     ru: блокировка / парообработка
@@ -577,6 +586,48 @@ crochet/context:
     - ba
     - br
 measurement:
+  обхват груди:
+    ru: обхват груди
+    en: bust circumference
+    fr: tour de poitrine
+    note: Основная мерка для расчёта ease; ориентируемся по таблице и формуле «ОГ/6 + припуск».
+    protected_tokens: []
+  ширина изделия:
+    ru: ширина изделия
+    en: garment width / chest width (laid flat)
+    fr: largeur du vêtement (au buste)
+    note: Горизонтальный замер изделия по груди в разложенном виде.
+    protected_tokens: []
+  длина по спинке:
+    ru: длина по спинке
+    en: back length
+    fr: longueur du vêtement (dos)
+    note: Вертикальный замер от горловины по центру спинки до низа.
+    protected_tokens: []
+  пройма / высота проймы:
+    ru: пройма / высота проймы
+    en: armhole depth / armhole height
+    fr: hauteur d'emmanchure
+    note: Используется для расчёта посадки рукава (в том числе реглана и круглой кокетки).
+    protected_tokens: []
+  длина рукава от горловины:
+    ru: длина рукава от горловины
+    en: sleeve length from neckline
+    fr: longueur de manche depuis l'encolure
+    note: Особенно важна для моделей с цельновязанными или спущенными плечами.
+    protected_tokens: []
+  ширина горловины:
+    ru: ширина горловины
+    en: neckline width
+    fr: largeur de l'encolure
+    note: Ширина выреза (часто задаётся в петлях/сантиметрах при планировании выреза переда или спинки).
+    protected_tokens: []
+  ширина рукава у запястья:
+    ru: ширина рукава у запястья
+    en: sleeve width at the wrist / cuff opening
+    fr: largeur de manche au poignet
+    note: Помогает задать силуэт рукава (облегающий манжет или свободный рукав-колокол).
+    protected_tokens: []
   плотность вязания / калибр:
     ru: плотность вязания / калибр
     en: gauge / tension

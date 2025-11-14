@@ -83,6 +83,8 @@ def render_docx_inplace(
         logger.warning("Skipped %s blocks because matching paragraph not found", skipped)
     logger.info("Updated %s paragraphs in DOCX", updated)
 
+    _rewrite_tables(document, translated_doc)
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(str(output_path))
     return output_path
@@ -114,11 +116,6 @@ def _iter_paragraphs(parent) -> Iterable[Paragraph]:
     for block in _iter_block_items(parent):
         if isinstance(block, Paragraph):
             yield block
-        elif isinstance(block, Table):
-            for row in block.rows:
-                for cell in row.cells:
-                    for paragraph in _iter_paragraphs(cell):
-                        yield paragraph
 
 
 def _align_paragraphs(
@@ -362,3 +359,90 @@ def _cleanup_docx_placeholders(docx_path: Path) -> None:
     if removed:
         doc.save(str(docx_path))
     logger.info("DOCX placeholder cleanup: removed=%s path=%s", removed, docx_path)
+
+
+def _rewrite_tables(document: Document, translated_doc: KPSDocument) -> None:
+    """Rewrite DOCX tables using translated table blocks."""
+
+    table_blocks: List[str] = []
+    for section in translated_doc.sections:
+        for block in section.blocks:
+            if block.block_type == BlockType.TABLE:
+                table_blocks.append(block.content or "")
+
+    if not table_blocks:
+        return
+
+    block_iter = iter(table_blocks)
+    replaced = 0
+    for table in document.tables:
+        try:
+            block_text = next(block_iter)
+        except StopIteration:
+            block_text = None
+
+        if not block_text:
+            continue
+
+        rows = _parse_table_block(block_text)
+        if not rows:
+            continue
+
+        if not _table_contains_cyrillic(table):
+            continue
+
+        max_cols = max(len(row) for row in rows)
+        for r_idx, row in enumerate(rows):
+            if r_idx >= len(table.rows):
+                break
+            for c_idx in range(max_cols):
+                if c_idx >= len(table.rows[r_idx].cells):
+                    break
+                value = row[c_idx] if c_idx < len(row) else ""
+                cell = table.rows[r_idx].cells[c_idx]
+                paragraph = cell.paragraphs[0] if cell.paragraphs else cell.add_paragraph("")
+                _clear_paragraph(paragraph)
+                paragraph.add_run(value)
+        replaced += 1
+
+    remaining = sum(1 for _ in block_iter)
+    if remaining:
+        logger.warning(
+            "%s translated tables were not applied because matching DOCX tables were not found",
+            remaining,
+        )
+    if replaced:
+        logger.info("Updated %s DOCX tables via template pipeline", replaced)
+
+
+def _table_contains_cyrillic(table: Table) -> bool:
+    import re
+
+    pattern = re.compile(r"[А-Яа-яЁё]")
+    for row in table.rows:
+        for cell in row.cells:
+            if pattern.search(cell.text):
+                return True
+    return False
+
+
+def _parse_table_block(block_text: str) -> List[List[str]]:
+    rows: List[List[str]] = []
+    for raw_line in block_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        stripped_line = line.strip("| ")
+        if not stripped_line:
+            continue
+        if all(ch in "-|: " for ch in stripped_line):
+            continue
+
+        if "\t" in raw_line:
+            cells = [cell.strip() for cell in raw_line.split("\t")]
+        else:
+            cells = [cell.strip() for cell in stripped_line.split("|")]
+
+        rows.append(cells)
+
+    return rows

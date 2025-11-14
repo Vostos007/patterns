@@ -241,11 +241,47 @@ class TermValidator:
 
         return corrected
 
+    _COMPOUND_SUFFIX_WHITELIST = {
+        "less",
+        "lesses",
+        "lessness",
+        "lessly",
+        "ful",
+        "fully",
+        "line",
+        "lines",
+        "lined",
+        "lining",
+        "ing",
+        "ings",
+        "ed",
+        "er",
+        "ers",
+    }
+
     def _contains_term(self, text_lower: str, term: str) -> bool:
         if not term:
             return False
         pattern = self._build_term_pattern(term)
-        return bool(pattern.search(text_lower))
+        if pattern.search(text_lower):
+            return True
+
+        # Allow compounds like "seamless" to satisfy the "seam" rule.
+        if len(term) >= 4 and self._compound_term_matches(text_lower, term):
+            return True
+
+        return False
+
+    def _compound_term_matches(self, text_lower: str, term: str) -> bool:
+        suffix_pattern = re.compile(
+            rf"\\b{re.escape(term.lower())}(?P<suffix>[a-z]+)\\b",
+            re.IGNORECASE,
+        )
+        for match in suffix_pattern.finditer(text_lower):
+            suffix = match.group("suffix").lower()
+            if suffix in self._COMPOUND_SUFFIX_WHITELIST:
+                return True
+        return False
 
     def _build_term_pattern(self, term: str) -> re.Pattern:
         """Create regex allowing simple plural/possessive variants."""
@@ -280,7 +316,11 @@ class TermValidator:
             return True
         if not term_word or not text_word:
             return False
-        if term_word in text_word or text_word in term_word:
+        if (
+            len(term_word) >= 4
+            and len(text_word) >= 4
+            and (term_word in text_word or text_word in term_word)
+        ):
             return True
         if len(term_word) >= 4 and len(text_word) >= 4:
             ratio = SequenceMatcher(None, term_word, text_word).ratio()

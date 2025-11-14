@@ -108,6 +108,9 @@ def translate(
         typer.echo(f"Segments translated: {result.segments_translated}")
         typer.echo(f"Cache hit rate: {result.cache_hit_rate:.0%}")
         typer.echo(f"Translation cost: ${result.translation_cost:.4f}")
+        typer.echo(
+            f"Input tokens: {result.total_input_tokens:,} | Output tokens: {result.total_output_tokens:,}"
+        )
         typer.echo(f"Processing time: {result.processing_time:.1f}s")
 
         if result.output_files:
@@ -195,8 +198,8 @@ def _maybe_run_layout_preserver(run_context, target_langs: list[str], preserve_f
 
 @app.command()
 def daemon(
-    inbox: str = typer.Option("inbox", "--inbox", "-i", help="Inbox directory to monitor"),
-    output: str = typer.Option("output", "--output", "-o", help="Output directory"),
+    inbox: str = typer.Option("to_translate", "--inbox", "-i", help="Incoming directory to monitor"),
+    output: str = typer.Option("translations", "--output", "-o", help="Output directory"),
     languages: str = typer.Option("en,fr", "--lang", "-l", help="Target languages (comma-separated)"),
     interval: int = typer.Option(300, "--interval", help="Check interval (seconds)"),
     log_level: str = typer.Option("INFO", "--log-level", help="Logging level"),
@@ -205,10 +208,10 @@ def daemon(
     """
     Start automatic document processing daemon.
 
-    Monitors the inbox directory and automatically processes new documents.
+    Monitors the incoming directory and automatically processes new documents.
 
     Example:
-        kps daemon --inbox ./inbox --lang en,fr --interval 300
+        kps daemon --inbox ./to_translate --lang en,fr --interval 300
         kps daemon --once  # Run once for testing
     """
     # Setup logging

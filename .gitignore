@@ -1,0 +1,5 @@
+# Translation IO directories
+/to_translate/*
+!/to_translate/.gitkeep
+/translations/*
+!/translations/.gitkeep

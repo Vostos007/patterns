@@ -39,6 +39,7 @@ try:
         SemanticEntry,
         SimilarTranslation,
     )
+    from .semantic_memory_pg import SemanticTranslationMemoryPG
 
     _SEMANTIC_AVAILABLE = True
 except ImportError:
@@ -118,6 +119,7 @@ if _SEMANTIC_AVAILABLE:
     __all__.extend(
         [
             "SemanticTranslationMemory",
+            "SemanticTranslationMemoryPG",
             "SemanticEntry",
             "SimilarTranslation",
         ]

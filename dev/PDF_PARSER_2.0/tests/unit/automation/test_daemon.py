@@ -18,9 +18,9 @@ def temp_dirs():
     """Create temporary directories for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         base = Path(tmpdir)
-        inbox = base / "inbox"
-        output = base / "output"
-        processed = base / "inbox/processed"
+        inbox = base / "to_translate"
+        output = base / "translations"
+        processed = base / "to_translate/processed"
         data = base / "data"
 
         inbox.mkdir(parents=True)
@@ -29,8 +29,8 @@ def temp_dirs():
         data.mkdir(parents=True)
 
         yield {
-            "inbox": inbox,
-            "output": output,
+            "to_translate": inbox,
+            "translations": output,
             "processed": processed,
             "data": data,
             "base": base,
@@ -65,16 +65,16 @@ class TestDocumentDaemon:
         state_file.write_text("")  # Empty state file
         
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
             target_languages=["en"],
             check_interval=60,
             state_file=state_file,
         )
 
-        assert daemon.inbox == temp_dirs["inbox"]
-        assert daemon.output == temp_dirs["output"]
+        assert daemon.inbox == temp_dirs["to_translate"]
+        assert daemon.output == temp_dirs["translations"]
         assert daemon.target_languages == ["en"]
         assert daemon.check_interval == 60
         assert len(daemon.processed_hashes) == 0
@@ -82,12 +82,12 @@ class TestDocumentDaemon:
     def test_get_file_hash(self, temp_dirs):
         """Test file hash calculation."""
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
         )
 
         # Create test file
-        test_file = temp_dirs["inbox"] / "test.txt"
+        test_file = temp_dirs["to_translate"] / "test.txt"
         test_content = b"Hello, World!"
         test_file.write_bytes(test_content)
 
@@ -99,10 +99,10 @@ class TestDocumentDaemon:
         assert file_hash == expected_hash
 
     def test_find_new_documents_empty(self, temp_dirs, mock_pipeline):
-        """Test finding documents when inbox is empty."""
+        """Test finding documents when incoming folder is empty."""
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
         )
 
         new_docs = daemon._find_new_documents()
@@ -111,13 +111,13 @@ class TestDocumentDaemon:
     def test_find_new_documents_with_files(self, temp_dirs, mock_pipeline):
         """Test finding new documents."""
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
         )
 
         # Create test files
-        pdf1 = temp_dirs["inbox"] / "doc1.pdf"
-        pdf2 = temp_dirs["inbox"] / "doc2.pdf"
+        pdf1 = temp_dirs["to_translate"] / "doc1.pdf"
+        pdf2 = temp_dirs["to_translate"] / "doc2.pdf"
         pdf1.write_text("PDF content 1")
         pdf2.write_text("PDF content 2")
 
@@ -134,13 +134,13 @@ class TestDocumentDaemon:
         state_file.write_text("")  # Empty state file
         
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             state_file=state_file,
         )
 
         # Create test file
-        pdf = temp_dirs["inbox"] / "doc.pdf"
+        pdf = temp_dirs["to_translate"] / "doc.pdf"
         pdf.write_text("PDF content")
 
         # First scan - should find it
@@ -161,8 +161,8 @@ class TestDocumentDaemon:
 
         # Create daemon with clean state
         daemon1 = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             state_file=state_file,
         )
 
@@ -172,8 +172,8 @@ class TestDocumentDaemon:
 
         # Create new daemon and load state
         daemon2 = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             state_file=state_file,
         )
         loaded_hashes = daemon2._load_state()
@@ -190,21 +190,21 @@ class TestDocumentDaemon:
         state_file.write_text("")  # Empty state file
         
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
             state_file=state_file,
         )
 
         # Create test file
-        pdf = temp_dirs["inbox"] / "test.pdf"
+        pdf = temp_dirs["to_translate"] / "test.pdf"
         pdf.write_text("PDF content")
 
         # Process
         daemon._process_document(pdf)
 
         # Verify
-        assert not pdf.exists()  # moved from inbox
+        assert not pdf.exists()  # moved from to_translate
         assert (temp_dirs["processed"] / "test.pdf").exists()  # moved to processed
         assert len(daemon.processed_hashes) == 1
         mock_pipeline.process.assert_called_once()
@@ -215,13 +215,13 @@ class TestDocumentDaemon:
         mock_pipeline.process.side_effect = RuntimeError("Pipeline error")
 
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
         )
 
         # Create test file
-        pdf = temp_dirs["inbox"] / "test.pdf"
+        pdf = temp_dirs["to_translate"] / "test.pdf"
         pdf.write_text("PDF content")
 
         # Process should raise
@@ -229,15 +229,15 @@ class TestDocumentDaemon:
             daemon._process_document(pdf)
 
         # File should be moved to failed folder
-        failed_path = temp_dirs["inbox"] / "failed" / "test.pdf"
+        failed_path = temp_dirs["to_translate"] / "failed" / "test.pdf"
         assert failed_path.exists()
         assert daemon.stats["total_errors"] == 1
 
     def test_run_once_no_documents(self, temp_dirs, mock_pipeline):
         """Test run_once with no new documents."""
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
         )
 
         daemon.run_once()
@@ -253,16 +253,16 @@ class TestDocumentDaemon:
         state_file.write_text("")  # Empty state file
         
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
             state_file=state_file,
         )
         daemon.processed_hashes = set()
 
         # Create test files
-        pdf1 = temp_dirs["inbox"] / "doc1.pdf"
-        pdf2 = temp_dirs["inbox"] / "doc2.pdf"
+        pdf1 = temp_dirs["to_translate"] / "doc1.pdf"
+        pdf2 = temp_dirs["to_translate"] / "doc2.pdf"
         pdf1.write_text("Content 1")
         pdf2.write_text("Content 2")
 
@@ -295,16 +295,16 @@ class TestDocumentDaemon:
         ]
 
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
             state_file=state_file,
         )
         daemon.processed_hashes = set()
 
         # Create test files
-        pdf1 = temp_dirs["inbox"] / "doc1.pdf"
-        pdf2 = temp_dirs["inbox"] / "doc2.pdf"
+        pdf1 = temp_dirs["to_translate"] / "doc1.pdf"
+        pdf2 = temp_dirs["to_translate"] / "doc2.pdf"
         pdf1.write_text("Content 1")
         pdf2.write_text("Content 2")
 
@@ -324,14 +324,14 @@ class TestDocumentDaemon:
         state_file.write_text("")  # Empty state file
         
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
             state_file=state_file,
         )
 
         # Create and process a document
-        pdf = temp_dirs["inbox"] / "doc.pdf"
+        pdf = temp_dirs["to_translate"] / "doc.pdf"
         pdf.write_text("Content")
 
         daemon.run_once()
@@ -351,8 +351,8 @@ class TestDocumentDaemonIntegration:
         state_file.write_text("")  # Empty state file
         
         daemon = DocumentDaemon(
-            inbox_dir=str(temp_dirs["inbox"]),
-            output_dir=str(temp_dirs["output"]),
+            inbox_dir=str(temp_dirs["to_translate"]),
+            output_dir=str(temp_dirs["translations"]),
             processed_dir=str(temp_dirs["processed"]),
             target_languages=["en", "fr"],
             state_file=state_file,
@@ -360,7 +360,7 @@ class TestDocumentDaemonIntegration:
         daemon.processed_hashes = set()
 
         # Create test document
-        pdf = temp_dirs["inbox"] / "pattern.pdf"
+        pdf = temp_dirs["to_translate"] / "pattern.pdf"
         pdf.write_text("Knitting pattern content")
         original_hash = daemon._get_file_hash(pdf)
 
@@ -368,7 +368,7 @@ class TestDocumentDaemonIntegration:
         daemon.run_once()
 
         # Verify:
-        # 1. File moved from inbox to processed
+        # 1. File moved from to_translate to processed
         assert not pdf.exists()
         assert (temp_dirs["processed"] / "pattern.pdf").exists()
 

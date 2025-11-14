@@ -149,6 +149,20 @@ class TranslationMemory:
         key = self._make_key(source_text, source_lang, target_lang)
         return self.entries.get(key)
 
+    def delete_translation(
+        self, source_text: str, source_lang: str, target_lang: str
+    ) -> None:
+        """Удалить запись перевода из кэша, если она существует."""
+
+        key = self._make_key(source_text, source_lang, target_lang)
+        removed = self.entries.pop(key, None)
+        if removed and self.cache_file:
+            try:
+                self.save()
+            except Exception:
+                # Ошибки сохранения не должны останавливать основной процесс
+                pass
+
     def get_few_shot_examples(
         self,
         source_lang: str,

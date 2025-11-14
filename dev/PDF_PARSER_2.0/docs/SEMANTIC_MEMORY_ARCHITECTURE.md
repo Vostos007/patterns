@@ -8,7 +8,7 @@
 
 ## 1. Структура хранения данных
 
-### 1.1 База данных (SQLite)
+### 1.1 База данных (SQLite / Postgres + pgvector)
 
 ```
 data/
@@ -17,6 +17,8 @@ data/
     ├── term_suggestions    # Предложения терминов
     └── [indexes]           # Индексы для быстрого поиска
 ```
+
+Для проектов с высоким трафиком можно переключить backend на Postgres, задав в `.env` строку подключения `POSTGRES_DSN` и параметр `semantic_backend=postgres` в `PipelineConfig`. В этом случае используется таблица `semantic_translations` с колонкой `embedding vector(1536)` и индексами pgvector (`ivfflat`/`hnsw`).
 
 ### 1.2 Таблица `translations`
 
@@ -86,37 +88,36 @@ Embedding: [0.12, -0.34, 0.56, ..., 0.78]  # 384 числа
 
 ### 2.2 Как создаются embeddings
 
-**В продакшене (рекомендуется):**
+**Боевой контур:**
 ```python
-from sentence_transformers import SentenceTransformer
+from openai import OpenAI
 
-# Многоязычная модель (поддерживает 50+ языков)
-model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-
-text = "Провяжите 2 петли вместе"
-embedding = model.encode(text)  # → numpy array [384]
+client = OpenAI()
+response = client.embeddings.create(
+    model="text-embedding-3-small",
+    input=["Провяжите 2 петли вместе"],
+)
+embedding = response.data[0].embedding  # 1536 float32
 ```
 
-**Модели для разных задач:**
-| Модель | Размер | Скорость | Точность | Языки |
-|--------|--------|----------|----------|-------|
-| `paraphrase-multilingual-MiniLM-L12-v2` | 384d | Быстро | Хорошо | 50+ |
-| `distiluse-base-multilingual-cased-v2` | 512d | Средне | Отлично | 50+ |
-| `LaBSE` | 768d | Медленно | Лучшее | 109 |
-
-**В текущей реализации (упрощённая симуляция):**
-```python
-def _get_embedding(self, text: str, lang: str) -> np.ndarray:
-    # Хеширование для демо
-    hash_bytes = hashlib.sha256(text.lower().encode()).digest()
-    embedding = np.frombuffer(hash_bytes, dtype=np.uint8)
-    embedding = np.tile(embedding, (384 // len(embedding) + 1))[:384]
-    return embedding.astype(np.float32) / 255.0
+Файл `.env` хранит ключи `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` и для локального CLI достаточно выполнть:
 ```
+cd dev/PDF_PARSER_2.0
+set -a && source .env && set +a
+python3 -m kps.cli translate ...
+```
+UI-сервис и dashboard автоматически считывают те же переменные.
+
+**Размеры/модели:** OpenAI `text-embedding-3-small` (1536d) по умолчанию; можно переключить через `PipelineConfig.embedding_model`. Обновить ключи — просто правка `.env`.
+
+**Историческая симуляция:** fallback-хеширование оставлено только для оффлайн-тестов.
 
 ### 2.3 Хранение embeddings
 
-**Формат:** BLOB (Binary Large Object) в SQLite
+**Формат хранения:**
+
+- SQLite: `embedding` (float32 → BLOB) + `embedding_q16` (float16) + `embedding_version` (INTEGER). Это позволяет кешировать около 1.5КБ + ~0.8КБ на запись и понимать, какие строки уже переиндексированы.
+- Postgres: `vector(1536)` в таблице `semantic_translations`. Для экономии места optional квантизация не требуется — Postgres сам хранит float32.
 ```python
 # Сохранение
 embedding: np.ndarray [384]  # float32
@@ -594,3 +595,68 @@ print(f"RAG примеров использовано: {result.rag_examples_used
 ---
 
 **Система готова к использованию и будет улучшаться с каждым переводом!** 🚀
+
+---
+
+## 4. Инструменты обслуживания
+
+### 4.1 `scripts/reindex_semantic_memory.py`
+- Пересчитывает embeddings для старых записей (например после перехода на OpenAI).
+- Опции: `--db`, `--target-version`, `--batch`, `--dry-run`.
+- Автоматически пишет float32 и float16 колонки.
+
+```
+python3 -m scripts.reindex_semantic_memory \
+  --db data/translation_memory.db \
+  --target-version 1 \
+  --batch 128
+```
+
+### 4.2 `scripts/seed_glossary_memory.py`
+- Прогревает семантическую память терминами из YAML-глоссария, чтобы RAG сразу видел спецсимволы.
+- Хранит хэш глоссария в таблице `metadata`, повторно не работает, если уже засеяно.
+- Поддерживает `--dry-run`, `--force` и кастомные модели эмбеддингов.
+
+```
+python3 -m scripts.seed_glossary_memory \
+  --glossary config/glossaries/knitting_custom.yaml \
+  --db data/translation_memory.db \
+  --source ru --target en
+```
+
+### 4.3 `scripts/sync_glossary.py`
+- Тянет свежий YAML из Notion/Google Sheets и решает проблемы типа «ряд → round».
+- После любой правки обязателен повторный запуск seed-скрипта.
+
+---
+
+## 5. Глоссарий + RAG
+
+- GlossaryTranslator вычисляет термы per-сегмент и группирует их по подписи. Для групп со спецсимволами порог RAG опускается до `special_symbol_min_similarity` (по умолчанию 0.6), что ускоряет решение кейсов со знаками вроде `⟨кромка⟩`.
+- Если сегмент не содержит термов, то RAG всё равно может выдать примеры, но с основным порогом из `rag_min_similarity` (0.75 по умолчанию).
+- При переводе больших документов сначала выполняется `seed_memory_with_entries`, если хеш YAML поменялся — это устраняет ошибки вида “Glossary enforcement failed”.
+
+---
+
+## 6. Переключение backend'ов
+
+| Параметр `PipelineConfig` | Значение | Что происходит |
+| --- | --- | --- |
+| `memory_type=MemoryType.SEMANTIC`, `semantic_backend=SemanticMemoryBackend.SQLITE` | по умолчанию | Используется `data/translation_memory.db` + SQLite BLOBы |
+| `memory_type=MemoryType.SEMANTIC`, `semantic_backend=SemanticMemoryBackend.POSTGRES`, `postgres_dsn=postgresql://…` | прод/стейджинг | Включается `SemanticTranslationMemoryPG`, данные пишутся в таблицы `semantic_translations`, `metadata`, `term_suggestions` |
+| `memory_type=MemoryType.SIMPLE` | dev fallback | JSON cache без эмбеддингов |
+
+На pgvector рекомендуется создавать `ivfflat` или `hnsw` индексы (см. `migrations/20251114_add_pgvector.sql`).
+
+---
+
+## 7. Release flow
+
+1. Обновить `.env` (ключи OpenAI/Anthropic/Postgres). Для CLI: `set -a && source .env && set +a`.
+2. `python3 -m scripts/sync_glossary.py` → убедиться, что пары вроде «ряд/round» есть.
+3. `python3 -m scripts/seed_glossary_memory.py …` → прогреть новый YAML.
+4. `python3 -m scripts/reindex_semantic_memory.py …` → переиндексировать старые строки.
+5. Прогнать `python3 -m pytest dev/PDF_PARSER_2.0/tests/test_translation_system.py -vv`.
+6. Тестовый прогон документа (`kps translate …` или UI) с флагами `--skip-translation-qa`, если нужно диагностика.
+7. Включить QA/TermValidator и убедиться, что ошибок нет.
+8. Задокументировать результаты в `docs/runbooks/semantic-memory.md`, отметить версию/теги.

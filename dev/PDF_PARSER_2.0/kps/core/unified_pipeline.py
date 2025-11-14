@@ -26,7 +26,7 @@ from kps.extraction.pymupdf_extractor import PyMuPDFExtractor
 from kps.extraction.segmenter import Segmenter, SegmenterConfig  # FIXED: correct class name
 
 # Core
-from kps.core.document import KPSDocument
+from kps.core.document import KPSDocument, BlockType
 
 # Translation
 from docling_core.types.doc import RefItem
@@ -36,10 +36,12 @@ from kps.translation import (
     GlossaryManager,
     GlossaryTranslator,
     SemanticTranslationMemory,
+    SemanticTranslationMemoryPG,
     TranslationMemory,
     TranslationOrchestrator,
 )
 from kps.translation.orchestrator import TranslationSegment
+from kps.clients.embeddings import EmbeddingsClient
 
 # Knowledge Base (NEW: integrate KB layer)
 try:
@@ -104,6 +106,13 @@ class MemoryType(Enum):
     SEMANTIC = "semantic"  # SQLite + embeddings + RAG
 
 
+class SemanticMemoryBackend(Enum):
+    """Бэкенд семантической памяти."""
+
+    SQLITE = "sqlite"
+    POSTGRES = "postgres"
+
+
 @dataclass
 class PipelineConfig:
     """Конфигурация unified pipeline."""
@@ -118,6 +127,14 @@ class PipelineConfig:
     glossary_path: Optional[str] = "config/glossaries/knitting_custom.yaml"
     enable_few_shot: bool = True
     enable_auto_suggestions: bool = True
+    embedding_model: str = "text-embedding-3-small"
+    translation_model: str = "gpt-5-nano"
+    translation_fallback_model: Optional[str] = "gpt-4o-mini"
+    embedding_batch_size: int = 16
+    embedding_timeout: float = 30.0
+    embedding_max_retries: int = 2
+    semantic_backend: SemanticMemoryBackend = SemanticMemoryBackend.SQLITE
+    postgres_dsn: Optional[str] = None
 
     # Knowledge Base (NEW)
     enable_knowledge_base: bool = True  # Включить RAG
@@ -127,6 +144,7 @@ class PipelineConfig:
     rag_enabled: bool = True  # Включить RAG поиск
     rag_examples_limit: int = 3  # Количество семантических примеров
     rag_min_similarity: float = 0.75  # Порог релевантности для RAG
+    special_symbol_min_similarity: float = 0.6  # Порог для спецсимволов
 
     # QA
     enable_qa: bool = False  # QA проверка (опционально)
@@ -162,6 +180,8 @@ class PipelineResult:
 
     # Statistics
     processing_time: float  # seconds
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 
@@ -252,6 +272,8 @@ class UnifiedPipeline:
 
         # Orchestrator
         self.orchestrator = TranslationOrchestrator(
+            model=self.config.translation_model,
+            fallback_model=self.config.translation_fallback_model,
             term_validator=self.term_validator,
             strict_glossary=bool(self.term_validator),
         )
@@ -260,10 +282,38 @@ class UnifiedPipeline:
         self.memory = None
         if self.config.memory_type != MemoryType.NONE and self.config.memory_path:
             if self.config.memory_type == MemoryType.SEMANTIC:
-                self.memory = SemanticTranslationMemory(
-                    self.config.memory_path, use_embeddings=True
-                )
-                logger.info("Semantic memory initialized (embeddings + RAG)")
+                embedding_client = None
+                try:
+                    embedding_client = EmbeddingsClient(
+                        model=self.config.embedding_model,
+                        max_batch=self.config.embedding_batch_size,
+                        max_retries=self.config.embedding_max_retries,
+                        timeout=self.config.embedding_timeout,
+                    )
+                except Exception as exc:  # pragma: no cover - best effort init
+                    logger.warning(
+                        "Failed to initialize embeddings client (%s). Semantic memory will degrade to non-embedding mode.",
+                        exc,
+                    )
+
+                if self.config.semantic_backend == SemanticMemoryBackend.POSTGRES:
+                    if not self.config.postgres_dsn:
+                        raise ValueError("postgres_dsn must be set for SemanticMemoryBackend.POSTGRES")
+                    self.memory = SemanticTranslationMemoryPG(
+                        self.config.postgres_dsn,
+                        embedding_client=embedding_client,
+                    )
+                    logger.info("Semantic memory initialized (Postgres backend)")
+                else:
+                    self.memory = SemanticTranslationMemory(
+                        self.config.memory_path,
+                        use_embeddings=embedding_client is not None,
+                        embedding_client=embedding_client,
+                    )
+                    logger.info(
+                        "Semantic memory initialized (SQLite backend, embeddings: %s)",
+                        bool(embedding_client),
+                    )
             else:  # SIMPLE
                 self.memory = TranslationMemory(self.config.memory_path)
                 logger.info("Simple memory initialized (JSON cache)")
@@ -475,6 +525,8 @@ class UnifiedPipeline:
         translated_documents: Dict[str, KPSDocument] = {}
         docling_translations: Dict[str, DoclingDocument] = {}
         total_cost = 0.0
+        total_input_tokens = 0
+        total_output_tokens = 0
         cache_hits = 0
         total_segments = len(segments)
         glossary_terms_found = 0
@@ -491,6 +543,11 @@ class UnifiedPipeline:
                 translated_documents[target_lang] = self.segmenter.merge_segments(
                     result.segments, document
                 )
+                self._translate_table_blocks(
+                    translated_documents[target_lang],
+                    source_language,
+                    target_lang,
+                )
                 if self.docling_document:
                     try:
                         docling_doc, missing_segments = apply_translations(
@@ -506,6 +563,8 @@ class UnifiedPipeline:
                             f"Docling export unavailable for {target_lang}: {exc}"
                         )
                 total_cost += result.total_cost
+                total_input_tokens += getattr(result, "total_input_tokens", 0)
+                total_output_tokens += getattr(result, "total_output_tokens", 0)
                 cache_hits += result.cached_segments
                 glossary_terms_found = max(glossary_terms_found, result.terms_found)
 
@@ -622,6 +681,8 @@ class UnifiedPipeline:
             cache_hit_rate=cache_hit_rate,
             glossary_terms_found=glossary_terms_found,
             translation_cost=total_cost,
+            total_input_tokens=total_input_tokens,
+            total_output_tokens=total_output_tokens,
             output_files=output_files,
             processing_time=processing_time,
             errors=errors,
@@ -735,27 +796,30 @@ class UnifiedPipeline:
         has_docling = docling_document is not None
 
         if fmt_lower == "docx":
-            fallback_builder = self._build_docx_fallback_builder(
+            structure_builder = self._build_docx_fallback_builder(
                 translated_doc=translated_doc,
                 original_input=original_input,
                 original_document=original_document,
                 output_file=output_file,
+                prefer_template=True,
             )
-            if has_docling:
-                docling_doc = cast(DoclingDocument, docling_document)
-                result = export_docx_with_fallback(
-                    docling_doc,
-                    output_path=output_file,
-                    reference_doc=self._resolve_docx_reference(),
-                    fallback_builder=fallback_builder,
-                )
-                warnings.extend(result.warnings)
-                if result.fallback_used:
-                    warnings.append(f"DOCX fallback renderer used: {result.renderer}")
+            try:
+                _, label = structure_builder()
+                warnings.append(f"DOCX renderer used pipeline: {label}")
                 return warnings
-            _, label = fallback_builder()
-            warnings.append(f"DOCX renderer used fallback (no Docling doc): {label}")
-            return warnings
+            except Exception as exc:
+                warnings.append(f"Structured DOCX renderer failed: {exc}")
+                if has_docling:
+                    docling_doc = cast(DoclingDocument, docling_document)
+                    result = export_docx_with_fallback(
+                        docling_doc,
+                        output_path=output_file,
+                        reference_doc=self._resolve_docx_reference(),
+                        fallback_builder=None,
+                    )
+                    warnings.extend(result.warnings)
+                    return warnings
+                raise
 
         if fmt_lower == "pdf":
             fallback_builder = self._build_pdf_fallback_builder(
@@ -821,6 +885,43 @@ class UnifiedPipeline:
 
         raise ValueError(f"Unsupported export format: {fmt}")
 
+    def _translate_table_blocks(
+        self,
+        translated_doc: KPSDocument,
+        source_lang: str,
+        target_lang: str,
+    ) -> None:
+        from kps.translation.orchestrator import TranslationSegment
+        import re
+
+        pattern = re.compile(r"[А-Яа-яЁё]")
+        table_blocks = []
+        segments: List[TranslationSegment] = []
+
+        for section in translated_doc.sections:
+            for block in section.blocks:
+                if block.block_type != BlockType.TABLE:
+                    continue
+                if not block.content or not pattern.search(block.content):
+                    continue
+                table_blocks.append(block)
+                segments.append(
+                    TranslationSegment(
+                        segment_id=f"table:{block.block_id}",
+                        text=block.content,
+                        placeholders={},
+                        doc_ref=None,
+                    )
+                )
+
+        if not segments:
+            return
+
+        batch = self.orchestrator.translate_batch(segments, [target_lang])
+        new_texts = batch.translations[target_lang].segments
+        for block, new_text in zip(table_blocks, new_texts):
+            block.content = new_text
+
     def _resolve_pdf_css(self) -> Optional[Path]:
         contract = self._get_style_contract()
         if not contract:
@@ -840,17 +941,38 @@ class UnifiedPipeline:
         original_input: Path,
         original_document: KPSDocument,
         output_file: Path,
+        *,
+        prefer_template: bool = False,
     ) -> Callable[[], Tuple[Path, str]]:
         def _builder() -> Tuple[Path, str]:
+            template_attempted = False
+
+            if prefer_template and original_input.suffix.lower() == ".docx" and original_input.exists():
+                try:
+                    render_docx_inplace(
+                        original_input,
+                        original_document,
+                        translated_doc,
+                        output_file,
+                    )
+                    return output_file, "docx-template"
+                except Exception as exc:
+                    template_attempted = True
+                    logger.warning(
+                        "Template DOCX export failed, falling back to structure: %s",
+                        exc,
+                    )
+
             try:
                 build_docx_from_structure(translated_doc, output_file)
                 return output_file, "docx-structure"
             except Exception as exc:
                 logger.warning(
-                    "Structured DOCX export failed, trying template fallback: %s",
+                    "Structured DOCX export failed%s: %s",
+                    " after template attempt" if template_attempted else "",
                     exc,
                 )
-                if original_input.suffix.lower() == ".docx" and original_input.exists():
+                if not template_attempted and original_input.suffix.lower() == ".docx" and original_input.exists():
                     render_docx_inplace(
                         original_input,
                         original_document,

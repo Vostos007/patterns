@@ -2,15 +2,15 @@
 Автоматический мониторинг и обработка документов.
 
 Функциональность:
-- Мониторинг папки inbox/ каждые N секунд
+- Мониторинг корневой папки `to_translate/` каждые N секунд
 - Определение новых/измененных файлов (по hash)
 - Запуск UnifiedPipeline для новых документов
-- Перемещение обработанных в processed/
+- Перемещение обработанных в `to_translate/processed`
 - Логирование всех операций
 
 Example:
     >>> daemon = DocumentDaemon(
-    ...     inbox_dir="inbox",
+    ...     inbox_dir="to_translate",
     ...     target_languages=["en", "fr"],
     ...     check_interval=300
     ... )
@@ -53,7 +53,7 @@ def wait_file_stable(
         True if file is stable, False if timeout
 
     Example:
-        >>> if wait_file_stable(Path("inbox/doc.pdf")):
+        >>> if wait_file_stable(Path("to_translate/doc.pdf")):
         ...     # Safe to process
         ...     process(doc)
     """
@@ -102,7 +102,7 @@ class FileLock:
     process can work on a file at a time.
 
     Example:
-        >>> with FileLock(Path("inbox/doc.pdf")) as lock:
+        >>> with FileLock(Path("to_translate/doc.pdf")) as lock:
         ...     if lock.acquired:
         ...         process_file()
     """
@@ -253,7 +253,7 @@ class DocumentDaemon:
     """
     Daemon для автоматической обработки документов.
 
-    Мониторит папку inbox/ и автоматически обрабатывает новые документы
+    Мониторит папку to_translate/ и автоматически обрабатывает новые документы
     через UnifiedPipeline. Использует hash-based deduplication для
     предотвращения повторной обработки одних и тех же файлов.
 
@@ -276,9 +276,9 @@ class DocumentDaemon:
 
     def __init__(
         self,
-        inbox_dir: str = "inbox",
-        output_dir: str = "output",
-        processed_dir: str = "inbox/processed",
+        inbox_dir: str = "to_translate",
+        output_dir: str = "translations",
+        processed_dir: Optional[str] = None,
         target_languages: List[str] = None,
         check_interval: int = 300,  # 5 минут
         pipeline_config: PipelineConfig = None,
@@ -288,16 +288,16 @@ class DocumentDaemon:
         Инициализация daemon.
 
         Args:
-            inbox_dir: Папка для входящих документов
-            output_dir: Папка для результатов
-            processed_dir: Папка для обработанных файлов
+            inbox_dir: Папка для входящих документов (по умолчанию to_translate/)
+            output_dir: Папка для результатов (по умолчанию translations/)
+            processed_dir: Папка для обработанных файлов (default: `<inbox>/processed`)
             target_languages: Список языков для перевода (default: ["en", "fr"])
             check_interval: Интервал проверки в секундах (default: 300)
             pipeline_config: Конфигурация pipeline (optional)
         """
         self.inbox = Path(inbox_dir)
         self.output = Path(output_dir)
-        self.processed = Path(processed_dir)
+        self.processed = Path(processed_dir) if processed_dir else self.inbox / "processed"
         self.target_languages = target_languages or ["en", "fr"]
         self.check_interval = check_interval
 
@@ -364,7 +364,7 @@ class DocumentDaemon:
 
     def _find_new_documents(self) -> List[Path]:
         """
-        Найти новые (не обработанные) документы в inbox.
+        Найти новые (не обработанные) документы в папке входящих (self.inbox).
 
         Returns:
             List of new document paths
@@ -568,7 +568,7 @@ class DocumentDaemon:
         """
         Запустить daemon в режиме бесконечного цикла.
 
-        Мониторит inbox и обрабатывает новые документы.
+        Мониторит входящую папку и обрабатывает новые документы.
         Останавливается по Ctrl+C (KeyboardInterrupt).
         """
         logger.info("=" * 60)
@@ -630,8 +630,8 @@ def main():
 
     @app.command()
     def start(
-        inbox: str = typer.Option("inbox", help="Inbox directory to monitor"),
-        output: str = typer.Option("output", help="Output directory for translations"),
+        inbox: str = typer.Option("to_translate", help="Incoming directory to monitor"),
+        output: str = typer.Option("translations", help="Output directory for translations"),
         languages: str = typer.Option("en,fr", help="Target languages (comma-separated)"),
         interval: int = typer.Option(300, help="Check interval in seconds"),
         log_level: str = typer.Option("INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)"),
@@ -639,7 +639,7 @@ def main():
         """
         Start the document processing daemon.
 
-        Monitors the inbox directory and automatically processes new documents.
+        Monitors the incoming directory and automatically processes new documents.
         """
         # Setup logging
         logging.basicConfig(

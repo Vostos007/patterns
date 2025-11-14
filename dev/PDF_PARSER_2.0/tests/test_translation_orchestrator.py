@@ -81,7 +81,7 @@ class TestTranslationOrchestrator:
 
         # Mock translation
         translate_mock = Mock()
-        translate_mock.choices = [Mock(message=Mock(content="Translated text 1---Translated text 2"))]
+        translate_mock.choices = [Mock(message=Mock(content="Translated text 1\n---\nTranslated text 2"))]
         translate_mock.usage = Mock(prompt_tokens=100, completion_tokens=50, total_tokens=150)
 
         mock_openai.chat.completions.create.side_effect = [detect_mock, translate_mock]
@@ -335,7 +335,8 @@ Glossary:
             mock = Mock()
             # Return numbered translations
             translations = [f"Translation {i}" for i in range(50)]
-            mock.choices = [Mock(message=Mock(content="---".join(translations)))]
+            payload = "\n---\n".join(translations)
+            mock.choices = [Mock(message=Mock(content=payload))]
             return mock
 
         # Setup mocks for 2 batches (51 segments total)
@@ -657,3 +658,22 @@ Glossary:
 
         # No API calls should be made
         mock_openai.chat.completions.create.assert_not_called()
+
+    def test_split_translated_segments_handles_markdown_tables(self):
+        """Ensure table header separators do not break segment parsing."""
+
+        orchestrator = TranslationOrchestrator()
+
+        payload = (
+            "Size table\n"
+            "| Bust | Width |\n"
+            "| --- | --- |\n"
+            "| 80 | 52 |\n"
+            "---\n"
+            "Next paragraph"
+        )
+
+        result = orchestrator._split_translated_segments(payload, expected_count=2)
+
+        assert "| --- | --- |" in result[0]
+        assert result[1] == "Next paragraph"

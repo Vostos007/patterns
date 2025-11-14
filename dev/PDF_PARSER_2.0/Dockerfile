@@ -20,10 +20,10 @@ COPY . /app
 RUN python scripts/create_reference_docx.py configs/reference.docx || echo "Skipping reference.docx generation"
 
 CMD ["python", "-m", "kps.cli", "export", \
-     "--input", "inbox/sample.pdf", \
+     "--input", "to_translate/sample.pdf", \
      "--md", "build/sample.md", \
      "--html", "build/sample.html", \
-     "--docx", "output/final.docx", \
-     "--pdf", "output/final.pdf", \
+     "--docx", "translations/final.docx", \
+     "--pdf", "translations/final.pdf", \
      "--reference", "configs/reference.docx", \
      "--css", "configs/pdf.css"]

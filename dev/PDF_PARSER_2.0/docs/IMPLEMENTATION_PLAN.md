@@ -4,6 +4,8 @@
 **Статус:** Ready to start
 **Основа:** [GAP_ANALYSIS.md](./GAP_ANALYSIS.md)
 
+> **Note (2025-11-14):** папки `inbox/` и `output/`, упомянутые далее в этом плане, теперь живут в корне репозитория как `to_translate/` и `translations/`. Сама архитектура остаётся прежней: daemon следит за `to_translate/`, перемещает обработанные файлы в `to_translate/processed`, а результаты отправляет в `translations/`.
+
 ---
 
 ## Философия реализации

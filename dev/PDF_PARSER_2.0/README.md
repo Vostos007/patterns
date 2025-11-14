@@ -54,6 +54,13 @@ result = pipeline.process("pattern.pdf", target_languages=["en", "fr"])
 > 2. Запустите `dev/PDF_PARSER_2.0/.venv/bin/python scripts/sync_glossary.py` — скрипт обновит `config/glossaries/knitting_custom.yaml`.
 > 3. Коммитьте и JSON, и YAML. UnifiedPipeline автоматически подхватит свежий YAML.
 
+### 📂 Рабочие папки по умолчанию
+
+- `to_translate/` (в корне репозитория) — сюда кладём входящие PDF/DOCX. DocumentDaemon, CLI (`kps daemon`) и будущий UI сервис следят именно за этой папкой и создают `processed/` и `failed/` внутри.
+- `translations/` — сюда пишутся готовые языковые пакеты. UnifiedPipeline всё ещё создаёт подпапки вида `pattern_EN/pattern_EN.pdf`, просто теперь они лежат в корневом каталоге, а не прячутся вглубь проекта.
+
+Папки попадают в git через `.gitkeep`, а содержимое остаётся в `.gitignore`, так что артефакты не утекут в историю.
+
 ---
 
 ## ⚡ Ключевые возможности
@@ -139,7 +146,26 @@ result = translator.translate(similar_segments, "en")
 - 🎓 **Few-Shot Learning** - ИИ учится на примерах
 - 📊 **Статистика** - usage_count, quality_score
 
+### 🗄️ Semantic Memory Backends
+
+Семантическая память теперь поддерживает два режима:
+
+| Параметр | Значение | Что даёт |
+| --- | --- | --- |
+| `PipelineConfig.semantic_backend="sqlite"` | (по умолчанию) | локальный файл `data/translation_memory.db` |
+| `PipelineConfig.semantic_backend="pgvector"` + `POSTGRES_DSN` | удалённый Postgres с расширением `pgvector` | общая память для команды, быстрый RAG |
+
+Дополнительно доступны скрипты:
+
+- `python3 scripts/seed_glossary_memory.py` — прогревает память глоссарными терминами;
+- `python3 scripts/reindex_semantic_memory.py` — переэмбеддинг + реиндексация (sqlite и pgvector поддерживаются);
+- `python3 scripts/sync_glossary.py` — синхронизация JSON → YAML (см. выше).
+
+Postgres-настройки читаются из `.env` (`POSTGRES_DSN=postgresql://user:pass@host:5432/db`). Для pgvector требуется расширение `CREATE EXTENSION IF NOT EXISTS vector;` и миграция `migrations/20251114_add_pgvector.sql`.
+
 📖 [SELF_LEARNING_TRANSLATION.md](./docs/SELF_LEARNING_TRANSLATION.md)
+
+📘 **Runbook:** [Semantic Memory Release](../docs/runbooks/semantic_memory_release.md)
 
 ---
 

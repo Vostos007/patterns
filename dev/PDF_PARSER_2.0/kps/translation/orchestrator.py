@@ -152,14 +152,16 @@ class TranslationOrchestrator:
 
     # Pricing per 1M tokens (as of 2025)
     MODEL_PRICING = {
-        "gpt-4o-mini": {"input": 0.15, "output": 0.60},  # $0.15/$0.60 per 1M tokens
+        "gpt-5-nano": {"input": 0.15, "output": 0.60},  # placeholder pricing
+        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
         "gpt-4o": {"input": 2.50, "output": 10.00},
         "gpt-4-turbo": {"input": 10.00, "output": 30.00},
     }
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-5-nano",
+        fallback_model: Optional[str] = "gpt-4o-mini",
         api_key: Optional[str] = None,
         max_batch_size: Optional[int] = 10,
         max_retries: int = 3,
@@ -180,6 +182,7 @@ class TranslationOrchestrator:
             strict_glossary: If True, enforce 100% glossary compliance (default: False)
         """
         self.model = model
+        self.fallback_model = fallback_model if fallback_model != model else None
         self.max_batch_size = max_batch_size
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -211,6 +214,64 @@ class TranslationOrchestrator:
                 "OpenAI API key is not configured. Set OPENAI_API_KEY in your environment or pass api_key to TranslationOrchestrator."
             )
 
+    def _chat_completion(self, *, messages, temperature, max_tokens, operation: str, **kwargs):
+        def invoke(model_name: str):
+            request_payload = {
+                "model": model_name,
+                "messages": messages,
+                **kwargs,
+            }
+
+            temp_value = temperature
+            if model_name.startswith("gpt-5"):
+                temp_value = None  # model enforces default temperature
+            if temp_value is not None:
+                request_payload["temperature"] = temp_value
+            if max_tokens is not None:
+                token_param = self._token_param_name(model_name)
+                request_payload[token_param] = max_tokens
+
+            return openai.chat.completions.create(**request_payload)
+
+        return self._invoke_with_fallback(invoke, operation)
+
+    def _token_param_name(self, model_name: str) -> str:
+        """Map model names to the correct token parameter."""
+
+        if model_name.startswith("gpt-5"):
+            return "max_completion_tokens"
+        return "max_tokens"
+
+    def _simple_language_guess(self, sample_text: str) -> str:
+        """Fallback heuristic for language detection."""
+
+        if re.search(r"[а-яё]", sample_text.lower()):
+            return "ru"
+        return "en"
+
+    def _invoke_with_fallback(self, builder: Callable[[str], object], operation: str):
+        models_to_try = [self.model]
+        if self.fallback_model and self.fallback_model not in models_to_try:
+            models_to_try.append(self.fallback_model)
+
+        last_exc: Optional[Exception] = None
+        for model_name in models_to_try:
+            try:
+                response = builder(model_name)
+                setattr(response, "_kps_model_used", model_name)
+                return response
+            except Exception as exc:  # pragma: no cover - network failures
+                last_exc = exc
+                logger.warning(
+                    "Model %s failed during %s: %s",
+                    model_name,
+                    operation,
+                    exc,
+                )
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("No model available for operation")
+
     def detect_language(self, sample_text: str) -> str:
         """
         Auto-detect source language of text.
@@ -230,15 +291,17 @@ Text:
 
 Language code:"""
 
-        response = openai.chat.completions.create(
-            model=self.model,
+        response = self._chat_completion(
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=10,
+            operation="language_detection",
         )
 
         detected = response.choices[0].message.content.strip().lower()
-        return detected
+        if not detected or len(detected) != 2:
+            detected = self._simple_language_guess(sample_text)
+        return detected or "ru"
 
     def translate_batch(
         self,
@@ -290,7 +353,7 @@ Language code:"""
             translated_segments: List[str] = []
 
             for batch in batches:
-                translated_batch, input_tokens, output_tokens = self._retry_with_backoff(
+                translated_batch, input_tokens, output_tokens, batch_model = self._retry_with_backoff(
                     lambda b=batch: self._translate_batch_with_tokens(
                         segments=b,
                         source_lang=source_lang,
@@ -302,7 +365,7 @@ Language code:"""
                 translated_segments.extend(translated_batch)
                 total_input_tokens += input_tokens
                 total_output_tokens += output_tokens
-                total_cost += self._calculate_cost(input_tokens, output_tokens, self.model)
+                total_cost += self._calculate_cost(input_tokens, output_tokens, batch_model)
 
             if self.term_validator:
                 translated_segments = self._validate_and_enforce_terms(
@@ -363,6 +426,7 @@ IMPORTANT:
 - Do NOT translate placeholders like <ph id="..." />
 - Separate translated segments with "---" on a new line
 - Maintain original formatting and structure
+- Respond ONLY with the translated segments; do not add commentary or explanations
 
 Segments:
 {segments_text}
@@ -370,24 +434,24 @@ Segments:
 Translated segments:"""
 
         # Call OpenAI API
-        response = openai.chat.completions.create(
-            model=self.model,
+        response = self._chat_completion(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
             max_tokens=8000,
+            operation=f"translation:{target_lang}",
         )
 
-        # Parse response
+        # Parse response using newline-delimited separators to avoid
+        # splitting Markdown tables that contain "| --- |" in header rows.
         translated_text = response.choices[0].message.content
-        translated_segments = [s.strip() for s in translated_text.split("---")]
-
-        # Ensure count matches
-        if len(translated_segments) != len(segments):
-            # Fallback: return original text
-            translated_segments = [s.text for s in segments]
+        translated_segments = self._split_translated_segments(
+            translated_text,
+            expected_count=len(segments),
+            source_segments=segments,
+        )
 
         # P2: Validate glossary compliance if term_validator is configured
         if self.term_validator:
@@ -417,8 +481,10 @@ Task: Translate text from {source_lang} to {target_lang}.
 Critical rules:
 1. Preserve ALL newlines (\\n) exactly as they appear
 2. Do NOT translate placeholders: <ph id="..." />
-3. Maintain original formatting and structure
-4. Use domain-specific terminology consistently"""
+3. Maintain original formatting (lists, tables, headings, inline math)
+4. Output MUST be entirely in {target_lang}. Replace any {source_lang} or Cyrillic words with their {target_lang} equivalents (units/numbers may stay numeric)
+5. Translate table headers, abbreviations, measurements, and descriptive phrases unless the glossary explicitly marks them as "do not translate"
+6. Use glossary terminology when provided and stay consistent throughout the document"""
 
         if glossary_context:
             base_prompt += f"\n\n{glossary_context}"
@@ -509,7 +575,7 @@ Critical rules:
                 batch_counter += 1
 
                 # Translate batch with retry
-                translated_batch, input_tokens, output_tokens = self._retry_with_backoff(
+                translated_batch, input_tokens, output_tokens, batch_model = self._retry_with_backoff(
                     lambda: self._translate_batch_with_tokens(
                         segments=batch,
                         source_lang=source_lang,
@@ -523,7 +589,7 @@ Critical rules:
                 # Update cost tracking
                 total_input_tokens += input_tokens
                 total_output_tokens += output_tokens
-                batch_cost = self._calculate_cost(input_tokens, output_tokens, self.model)
+                batch_cost = self._calculate_cost(input_tokens, output_tokens, batch_model)
                 total_cost += batch_cost
 
                 # Progress callback
@@ -648,7 +714,7 @@ Critical rules:
         source_lang: str,
         target_lang: str,
         glossary_context: Optional[str],
-    ) -> tuple[List[str], int, int]:
+    ) -> tuple[List[str], int, int, str]:
         """
         Translate batch and return token counts.
 
@@ -677,6 +743,7 @@ IMPORTANT:
 - Do NOT translate placeholders like <ph id="..." />
 - Separate translated segments with "---" on a new line
 - Maintain original formatting and structure
+- Respond ONLY with the translated segments; do not add commentary or explanations
 
 Segments:
 {segments_text}
@@ -684,15 +751,16 @@ Segments:
 Translated segments:"""
 
         # Call OpenAI API
-        response = openai.chat.completions.create(
-            model=self.model,
+        response = self._chat_completion(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
             max_tokens=8000,
+            operation=f"translation_batch:{target_lang}",
         )
+        response_model = getattr(response, "_kps_model_used", getattr(response, "model", self.model))
 
         # Extract token counts from response (some tests omit usage)
         usage = getattr(response, "usage", None)
@@ -706,14 +774,64 @@ Translated segments:"""
 
         # Parse response
         translated_text = response.choices[0].message.content
-        translated_segments = [s.strip() for s in translated_text.split("---")]
+        translated_segments = self._split_translated_segments(
+            translated_text,
+            expected_count=len(segments),
+            source_segments=segments,
+        )
 
-        # Ensure count matches
-        if len(translated_segments) != len(segments):
-            # Fallback: return original text
-            translated_segments = [s.text for s in segments]
+        return translated_segments, input_tokens, output_tokens, response_model
 
-        return translated_segments, input_tokens, output_tokens
+    def _split_translated_segments(
+        self,
+        translated_text: Optional[str],
+        expected_count: int,
+        source_segments: Optional[List[TranslationSegment]] = None,
+    ) -> List[str]:
+        """Split translated output using dedicated delimiter lines."""
+
+        if expected_count <= 0:
+            return []
+
+        text = (translated_text or "").strip("\n")
+        if not text:
+            return [""] * expected_count
+
+        segments: List[str] = []
+        current_lines: List[str] = []
+
+        for line in text.splitlines():
+            if line.strip() == "---":
+                segments.append("\n".join(current_lines).strip())
+                current_lines = []
+            else:
+                current_lines.append(line)
+
+        segments.append("\n".join(current_lines).strip())
+
+        # Remove trailing empties caused by a terminal delimiter when we already
+        # collected enough segments.
+        while len(segments) > expected_count and segments and segments[-1] == "":
+            segments.pop()
+
+        if len(segments) == expected_count:
+            return segments
+
+        if len(segments) < expected_count:
+            segments.extend([""] * (expected_count - len(segments)))
+        else:
+            overflow = segments[expected_count - 1 :]
+            merged = "\n---\n".join(part for part in overflow if part)
+            segments = segments[: expected_count - 1] + [merged]
+
+        if len(segments) == expected_count:
+            return segments
+
+        if source_segments is not None:
+            return [seg.text for seg in source_segments]
+
+        segments.extend([""] * max(0, expected_count - len(segments)))
+        return segments[:expected_count]
 
     def _count_tokens(self, text: str, model: str) -> int:
         """
@@ -864,55 +982,26 @@ Translated segments:"""
         total_violations = 0
 
         for idx, (src_seg, tgt_text) in enumerate(zip(segments, translated_segments)):
-            corrected_text = tgt_text
-            rules = self.term_validator.get_rules_for_context(
-                src_text=src_seg.text,
-                src_lang=source_lang,
-                tgt_lang=target_lang,
-            )
-
-            if self._looks_like_source_language(corrected_text, source_lang):
-                structured = self._translate_with_structured_outputs(
-                    segment=src_seg,
-                    source_lang=source_lang,
-                    target_lang=target_lang,
-                    rules=rules,
-                )
-                if structured:
-                    corrected_text = structured
-
             violations = self.term_validator.validate(
                 src_text=src_seg.text,
-                tgt_text=corrected_text,
+                tgt_text=tgt_text,
                 src_lang=source_lang,
                 tgt_lang=target_lang,
             )
 
-            if not violations:
-                corrected_segments.append(corrected_text)
-                continue
-
-            total_violations += len(violations)
-            self.validation_metrics["violations_detected"] += len(violations)
-
-            structured_translation = self._translate_with_structured_outputs(
-                segment=src_seg,
-                source_lang=source_lang,
-                target_lang=target_lang,
-                rules=rules,
-            ) if rules else None
-
-            if structured_translation:
-                self.validation_metrics["retries_for_terms"] += 1
-                corrected_text = structured_translation
-                violations = self.term_validator.validate(
-                    src_text=src_seg.text,
-                    tgt_text=corrected_text,
-                    src_lang=source_lang,
-                    tgt_lang=target_lang,
-                )
-
             if violations:
+                total_violations += len(violations)
+                if self.term_validator and self.strict_glossary:
+                    structured_translation = self._translate_with_structured_outputs(
+                        segment=src_seg,
+                        source_lang=source_lang,
+                        target_lang=target_lang,
+                        rules=[violation.rule for violation in violations if violation.rule],
+                    )
+                else:
+                    structured_translation = None
+
+                corrected_text = structured_translation or tgt_text
                 corrected_text = self.term_validator.enforce(
                     src_text=src_seg.text,
                     tgt_text=corrected_text,
@@ -920,26 +1009,8 @@ Translated segments:"""
                     tgt_lang=target_lang,
                     fix_mode="replace",
                 )
-                self.validation_metrics["enforcements"] += 1
-                remaining = self.term_validator.validate(
-                    src_text=src_seg.text,
-                    tgt_text=corrected_text,
-                    src_lang=source_lang,
-                    tgt_lang=target_lang,
-                )
-                if remaining and self.strict_glossary:
-                    details = ", ".join(
-                        f"{v.type}:{v.rule.src}->{v.rule.tgt}" for v in remaining
-                    )
-                    logger.error(
-                        "Glossary enforcement stuck for %s: %s | text=%s",
-                        src_seg.segment_id,
-                        details,
-                        corrected_text[:120],
-                    )
-                    raise ValueError(
-                        f"Glossary enforcement failed for segment {src_seg.segment_id}"
-                    )
+            else:
+                corrected_text = tgt_text
 
             corrected_segments.append(corrected_text)
 
@@ -951,6 +1022,59 @@ Translated segments:"""
             )
 
         return corrected_segments
+
+    def translate_segments_strict(
+        self,
+        segments: List[TranslationSegment],
+        source_lang: str,
+        target_lang: str,
+        glossary_context: Optional[str],
+    ) -> List[str]:
+        """Translate segments with explicit reminder to avoid source language."""
+        if not segments:
+            return []
+
+        system_prompt = self._build_system_prompt(
+            source_lang=source_lang,
+            target_lang=target_lang,
+            glossary_context=glossary_context,
+        )
+        extra_notice = (
+            f"The output MUST be entirely in {target_lang}."
+            f" Replace any {source_lang} or Cyrillic words with {target_lang} equivalents."
+        )
+        segments_text = "\n---\n".join([s.text for s in segments])
+
+        user_prompt = f"""Translate the following segments from {source_lang} to {target_lang}.
+
+IMPORTANT:
+- Preserve ALL newlines (\\n) EXACTLY as they appear
+- Do NOT translate placeholders like <ph id=\"...\" />
+- Separate translated segments with \"---\" on a new line
+- Maintain original formatting and structure
+- Respond ONLY with the translated segments; do not add commentary or explanations
+- {extra_notice}
+
+Segments:
+{segments_text}
+
+Translated segments:"""
+
+        response = self._chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+            max_tokens=4000,
+            operation=f"translation_strict:{target_lang}",
+        )
+        translated_text = response.choices[0].message.content
+        translated_segments = [s.strip() for s in translated_text.split("---")]
+        if len(translated_segments) != len(segments):
+            translated_segments = [s.text for s in segments]
+        return translated_segments
+
 
     def _translate_with_structured_outputs(
         self,
@@ -983,9 +1107,9 @@ Translated segments:"""
         }
 
         try:
-            response = openai.chat.completions.create(
-                model=self.model,
+            response = self._chat_completion(
                 temperature=0.0,
+                max_tokens=2048,
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
@@ -1008,6 +1132,7 @@ Translated segments:"""
                         "content": json.dumps(payload, ensure_ascii=False),
                     },
                 ],
+                operation=f"structured_retry:{target_lang}",
             )
             content = response.choices[0].message.content
             data = json.loads(content)

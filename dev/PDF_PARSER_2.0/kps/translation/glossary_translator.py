@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from .glossary.manager import GlossaryEntry, GlossaryManager
+from .glossary_seed import compute_glossary_checksum, seed_memory_with_entries
 from .orchestrator import (
     BatchTranslationResult,
     TranslationOrchestrator,
@@ -44,6 +45,8 @@ class TranslationResult:
     total_cost: float
     cached_segments: int = 0  # Сегменты из кэша
     new_term_suggestions: int = 0  # Предложения новых терминов
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
 
 
 class GlossaryTranslator:
@@ -107,6 +110,14 @@ class GlossaryTranslator:
         self.enable_few_shot = enable_few_shot
         self.enable_auto_suggestions = enable_auto_suggestions
         self.config = config
+        self._glossary_checksum = None
+        try:
+            if hasattr(self.glossary, "glossary_paths"):
+                self._glossary_checksum = compute_glossary_checksum(
+                    self.glossary.glossary_paths
+                )
+        except Exception:  # pragma: no cover - best effort only
+            logger.debug("Failed to compute glossary checksum", exc_info=True)
 
         # If the orchestrator already has a term validator, force strict enforcement.
         if getattr(self.orchestrator, "term_validator", None):
@@ -135,22 +146,42 @@ class GlossaryTranslator:
             source_language = self.orchestrator.detect_language(sample)
 
         # Check cache for existing translations
-        translated_segments = []
+        translated_segments: List[Optional[str]] = []
         segments_to_translate = []
         segment_indices = []  # Индексы сегментов для перевода
         cached_count = 0
 
         for i, segment in enumerate(segments):
+            cached_entry = None
+            cached_text: Optional[str] = None
             if self.memory:
-                cached = self.memory.get_translation(
+                cached_entry = self.memory.get_translation(
                     segment.text, source_language, target_language
                 )
-                if cached:
-                    cached.usage_count += 1
-                    cached.timestamp = time.time()
-                    translated_segments.append(cached.translated_text)
+                if cached_entry:
+                    cached_text = getattr(cached_entry, "translated_text", None)
+
+            if cached_entry and cached_text:
+                if not self._looks_like_source_language(cached_text, source_language):
+                    cached_entry.usage_count += 1
+                    if hasattr(cached_entry, "timestamp"):
+                        cached_entry.timestamp = time.time()
+                    translated_segments.append(cached_text)
                     cached_count += 1
                     continue
+
+                # Кэш содержит исходный язык — удаляем и переведём заново
+                logger.info(
+                    "Evicting stale cache for %s (%s→%s)",
+                    segment.segment_id,
+                    source_language,
+                    target_language,
+                )
+                self._evict_cached_translation(
+                    segment.text,
+                    source_language,
+                    target_language,
+                )
 
             # Нужно перевести
             translated_segments.append(None)  # Placeholder
@@ -168,9 +199,16 @@ class GlossaryTranslator:
                 cached_segments=cached_count,
             )
 
+        self._maybe_seed_glossary(source_language, target_language)
+
         # Find all glossary terms in source text
         all_text = " ".join([s.text for s in segments_to_translate])
         term_keys = self._find_terms(all_text, source_language, target_language)
+        segment_term_map: Dict[str, List[str]] = {}
+        for segment in segments_to_translate:
+            segment_term_map[segment.segment_id] = self._find_terms(
+                segment.text, source_language, target_language
+            )
 
         # Get glossary entries for found terms
         glossary_entries = self._get_entries_for_keys(term_keys)
@@ -179,8 +217,7 @@ class GlossaryTranslator:
         if len(glossary_entries) > self.max_glossary_terms:
             # Count term frequency
             term_freq = {key: 0 for key in term_keys}
-            for segment in segments_to_translate:
-                found = self._find_terms(segment.text, source_language, target_language)
+            for found in segment_term_map.values():
                 for key in found:
                     term_freq[key] = term_freq.get(key, 0) + 1
 
@@ -210,33 +247,14 @@ class GlossaryTranslator:
                     glossary_context += f"- {source} → {target}\n"
 
         # RAG INTEGRATION - Add semantic examples
-        if (self.memory and hasattr(self.memory, 'get_rag_examples') and 
-            segments_to_translate and 
-            self.config and getattr(self.config, 'rag_enabled', True)):
-            try:
-                # Use config parameters or defaults
-                rag_limit = getattr(self.config, 'rag_examples_limit', 3)
-                min_similarity = getattr(self.config, 'rag_min_similarity', 0.75)
-                
-                # Use first segment for semantic search
-                query_text = " ".join([s.text[:100] for s in segments_to_translate[:2]])
-                
-                rag_examples = self.memory.get_rag_examples(
-                    query_text,
-                    source_language,
-                    target_language,
-                    limit=rag_limit,
-                    min_similarity=min_similarity
-                )
-                
-                if rag_examples:
-                    glossary_context += "\n\n# Контекстуально-релевантные примеры (RAG):\n"
-                    for source, target, similarity in rag_examples:
-                        glossary_context += f"- Сходство {similarity:.2f}: \"{source[:50]}...\" → \"{target[:50]}...\"\n"
-                    logger.info(f"RAG examples: {len(rag_examples)} semantic matches found (threshold: {min_similarity:.2f})")
-                
-            except Exception as e:
-                logger.warning(f"RAG lookup failed: {e}, continuing without examples")
+        rag_context = self._build_rag_context(
+            segments_to_translate,
+            segment_term_map,
+            source_language,
+            target_language,
+        )
+        if rag_context:
+            glossary_context += rag_context
 
         # Translate with glossary context
         batch_result = self.orchestrator.translate_batch(
@@ -254,6 +272,25 @@ class GlossaryTranslator:
                 decode_placeholders(translation, segment.placeholders)
             )
 
+        # Detect segments that still look like source language
+        strict_translate = getattr(self.orchestrator, "translate_segments_strict", None)
+        suspect_segments = []
+        if strict_translate:
+            for local_idx, (segment, translation) in enumerate(zip(segments_to_translate, decoded_batch)):
+                    if self._looks_like_source_language(translation, source_language):
+                        suspect_segments.append((local_idx, segment))
+
+            if suspect_segments:
+                strict_segments = [seg for _idx, seg in suspect_segments]
+                strict_translations = strict_translate(
+                    segments=strict_segments,
+                    source_lang=source_language,
+                    target_lang=target_language,
+                    glossary_context=glossary_context,
+                )
+                for (local_idx, _seg), strict_text in zip(suspect_segments, strict_translations):
+                    decoded_batch[local_idx] = strict_text
+
         # Merge cached and new translations
         for idx, translation in zip(segment_indices, decoded_batch):
             translated_segments[idx] = translation
@@ -262,16 +299,20 @@ class GlossaryTranslator:
         new_suggestions = 0
         if self.memory:
             for segment, translation in zip(segments_to_translate, decoded_batch):
-                if translation.strip() == segment.text.strip():
+                if self._looks_like_source_language(translation, source_language):
                     logger.warning(
-                        "Skipping cache for %s because translation == source",
+                        "Skipping cache for %s because translation still looks like %s",
                         segment.segment_id,
+                        source_language,
+                    )
+                    self._evict_cached_translation(
+                        segment.text,
+                        source_language,
+                        target_language,
                     )
                     continue
                 # Найти термины для этого сегмента
-                segment_terms = self._find_terms(
-                    segment.text, source_language, target_language
-                )
+                segment_terms = segment_term_map.get(segment.segment_id, [])
 
                 # Сохранить в память
                 self.memory.add_translation(
@@ -312,7 +353,154 @@ class GlossaryTranslator:
             total_cost=batch_result.total_cost,
             cached_segments=cached_count,
             new_term_suggestions=new_suggestions,
+            total_input_tokens=getattr(batch_result, "total_input_tokens", 0),
+            total_output_tokens=getattr(batch_result, "total_output_tokens", 0),
         )
+
+    def _maybe_seed_glossary(self, source_language: str, target_language: str) -> None:
+        if not self.memory:
+            return
+
+        has_meta_api = all(
+            hasattr(self.memory, attr) for attr in ("get_metadata", "set_metadata")
+        )
+        if not has_meta_api or not self._glossary_checksum:
+            return
+
+        metadata_key = f"glossary_seed:{source_language}:{target_language}"
+        try:
+            current = self.memory.get_metadata(metadata_key)
+        except Exception:  # pragma: no cover - avoid blocking translation
+            logger.debug("Failed to read glossary seed metadata", exc_info=True)
+            return
+
+        if current == self._glossary_checksum:
+            return
+
+        try:
+            seeded = seed_memory_with_entries(
+                self.memory,
+                self.glossary,
+                source_lang=source_language,
+                target_lang=target_language,
+                checksum=self._glossary_checksum,
+            )
+            self.memory.set_metadata(metadata_key, self._glossary_checksum)
+            logger.info(
+                "Seeded %s glossary pairs into semantic memory for %s→%s",
+                seeded,
+                source_language,
+                target_language,
+            )
+        except Exception:  # pragma: no cover
+            logger.warning("Glossary seeding failed", exc_info=True)
+
+    def _build_rag_context(
+        self,
+        segments: List[TranslationSegment],
+        segment_term_map: Dict[str, List[str]],
+        source_language: str,
+        target_language: str,
+    ) -> str:
+        if not (
+            self.memory
+            and hasattr(self.memory, "get_rag_examples")
+            and self.config
+            and getattr(self.config, "rag_enabled", True)
+        ):
+            return ""
+
+        rag_limit = getattr(self.config, "rag_examples_limit", 3)
+        default_similarity = getattr(self.config, "rag_min_similarity", 0.75)
+        symbol_similarity = getattr(
+            self.config, "special_symbol_min_similarity", 0.6
+        )
+
+        groups = self._group_segments_by_terms(segments, segment_term_map)
+        sections: List[str] = []
+
+        for signature, cluster in groups.items():
+            query_text = " ".join([s.text[:100] for s in cluster[:2]])
+            threshold = (
+                symbol_similarity
+                if self._is_symbol_signature(signature, source_language, target_language)
+                else default_similarity
+            )
+            try:
+                rag_examples = self.memory.get_rag_examples(
+                    query_text,
+                    source_language,
+                    target_language,
+                    limit=rag_limit,
+                    min_similarity=threshold,
+                )
+            except Exception as exc:  # pragma: no cover
+                logger.warning("RAG lookup failed: %s", exc)
+                continue
+
+            if rag_examples:
+                if signature == ("__no_terms__",):
+                    header = "без терминов"
+                elif signature == ("__symbol__",):
+                    header = "спецсимволы"
+                else:
+                    header = ", ".join(signature)
+                sections.append(f"- Группа терминов {header}:")
+                for source, target, similarity in rag_examples:
+                    sections.append(
+                        f"  - Сходство {similarity:.2f}: \"{source[:50]}...\" → \"{target[:50]}...\""
+                    )
+                logger.info(
+                    "RAG examples: %s matches for %s (threshold %.2f)",
+                    len(rag_examples),
+                    header,
+                    threshold,
+                )
+
+        if not sections:
+            return ""
+
+        return "\n\n# Контекстуально-релевантные примеры (RAG):\n" + "\n".join(
+            sections
+        )
+
+    def _group_segments_by_terms(
+        self,
+        segments: List[TranslationSegment],
+        segment_term_map: Dict[str, List[str]],
+    ) -> Dict[tuple, List[TranslationSegment]]:
+        groups: Dict[tuple, List[TranslationSegment]] = {}
+        special_chars = set("⟨⟩<>[]{}*/°±∞µ√×÷▪•○§№™©®")
+        for segment in segments:
+            terms = segment_term_map.get(segment.segment_id, [])
+            if terms:
+                signature = tuple(sorted(terms))
+            elif any(ch in special_chars for ch in segment.text):
+                signature = ("__symbol__",)
+            else:
+                signature = ("__no_terms__",)
+            groups.setdefault(signature, []).append(segment)
+        return groups
+
+    def _is_symbol_signature(
+        self,
+        signature: tuple,
+        source_language: str,
+        target_language: str,
+    ) -> bool:
+        special_chars = set("⟨⟩<>[]{}*/°±∞µ√×÷▪•○§№™©®")
+        for term_key in signature:
+            if term_key in {"__no_terms__"}:
+                continue
+            if term_key == "__symbol__":
+                return True
+            match = self.glossary.lookup(term_key, source_language, target_language)
+            text = match.source_text if match else term_key
+            if match and match.category and "symbol" in match.category.lower():
+                return True
+            if any(ch in special_chars for ch in text):
+                return True
+        return False
 
     def _find_terms(
         self, text: str, source_lang: str, target_lang: str
@@ -409,6 +597,43 @@ class GlossaryTranslator:
         """Сохранить память переводов на диск."""
         if self.memory:
             self.memory.save()
+
+    # --- Internal helpers -------------------------------------------------
+
+    def _evict_cached_translation(
+        self,
+        source_text: str,
+        source_language: str,
+        target_language: str,
+    ) -> None:
+        if not self.memory or not hasattr(self.memory, "delete_translation"):
+            return
+
+        try:
+            self.memory.delete_translation(
+                source_text=source_text,
+                source_lang=source_language,
+                target_lang=target_language,
+            )
+        except Exception:  # pragma: no cover - best effort eviction
+            logger.debug("Failed to evict cached translation", exc_info=True)
+
+    def _looks_like_source_language(self, text: Optional[str], source_language: str) -> bool:
+        if not text:
+            return False
+
+        checker = getattr(self.orchestrator, "_looks_like_source_language", None)
+        if checker:
+            return bool(checker(text, source_language))
+
+        if not source_language:
+            return False
+
+        normalized = text.lower()
+        if source_language.lower().startswith("ru"):
+            return bool(re.search(r"[а-яё]", normalized))
+
+        return False
 
 
 __all__ = ["GlossaryTranslator", "TranslationResult"]

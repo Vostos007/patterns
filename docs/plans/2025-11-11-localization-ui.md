@@ -4,7 +4,7 @@
 
 **Goal:** Ship a localhost web UI where operators drop a PDF/DOCX, trigger the KPS pipeline, watch progress, and download translated artifacts.
 
-**Architecture:** Wrap the existing Python pipeline with a FastAPI job service that marshals uploads into the inbox/outputs folders, exposes status/download endpoints, and emits structured events. A Next.js + shadcn/ui dashboard talks to this backend via REST, offering drag-and-drop upload, live status, and download cards for each target language.
+**Architecture:** Wrap the existing Python pipeline with a FastAPI job service that marshals uploads into the root-level `to_translate/` folder and writes finished artifacts to `translations/`, exposes status/download endpoints, and emits structured events. A Next.js + shadcn/ui dashboard talks to this backend via REST, offering drag-and-drop upload, live status, and download cards for each target language.
 
 **Tech Stack:** FastAPI + Uvicorn, Pydantic models, pytest, Next.js 14 (App Router) + shadcn/ui + Tailwind, axios/fetch, WebSockets (optional SSE) for live updates.
 

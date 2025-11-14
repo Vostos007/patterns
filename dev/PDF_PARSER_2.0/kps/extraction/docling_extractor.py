@@ -574,6 +574,10 @@ class DoclingExtractor:
                 resolved, "cref", None
             )
 
+            if self._is_table_item(resolved):
+                yield doc_ref, resolved
+                return
+
             child_items = getattr(resolved, "children", None) or []
             if child_items:
                 for child in child_items:
@@ -686,6 +690,17 @@ class DoclingExtractor:
                     return first
 
         return None
+
+    def _is_table_item(self, docling_item: Optional[Any]) -> bool:
+        if docling_item is None:
+            return False
+
+        docling_type = getattr(docling_item, "obj_type", "") or ""
+        if isinstance(docling_type, str) and "table" in docling_type.lower():
+            return True
+
+        label_hint = self._infer_docling_label(docling_item)
+        return label_hint == "table"
 
     def _create_content_block(
         self,
