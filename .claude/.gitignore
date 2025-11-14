@@ -1,9 +1,0 @@
-# Ignore everything in .claude by default
-*
-
-# But track the docs directory
-!docs/
-!docs/**
-
-# And track this .gitignore file itself
-!.gitignore

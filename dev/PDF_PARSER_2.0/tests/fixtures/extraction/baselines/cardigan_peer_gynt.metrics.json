@@ -1,11 +1,12 @@
 {
   "source_file": "/Users/vostos/Dev/Hollywool patterns/dev/PDF_PARSER_2.0/tests/fixtures/extraction/cardigan_peer_gynt.docx",
   "sections": 1,
-  "total_blocks": 249,
+  "total_blocks": 246,
   "block_types": {
-    "paragraph": 249
+    "paragraph": 245,
+    "table": 1
   },
-  "doc_refs_with_block": 249,
+  "doc_refs_with_block": 246,
   "doc_refs_missing": 0,
-  "docling_block_map": 249
+  "docling_block_map": 246
 }

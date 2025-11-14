@@ -982,26 +982,58 @@ Translated segments:"""
         total_violations = 0
 
         for idx, (src_seg, tgt_text) in enumerate(zip(segments, translated_segments)):
-            violations = self.term_validator.validate(
+            corrected_text = tgt_text
+            rules = self.term_validator.get_rules_for_context(
                 src_text=src_seg.text,
-                tgt_text=tgt_text,
                 src_lang=source_lang,
                 tgt_lang=target_lang,
             )
 
-            if violations:
-                total_violations += len(violations)
-                if self.term_validator and self.strict_glossary:
-                    structured_translation = self._translate_with_structured_outputs(
-                        segment=src_seg,
-                        source_lang=source_lang,
-                        target_lang=target_lang,
-                        rules=[violation.rule for violation in violations if violation.rule],
-                    )
-                else:
-                    structured_translation = None
+            if self._looks_like_source_language(corrected_text, source_lang):
+                structured = self._translate_with_structured_outputs(
+                    segment=src_seg,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                    rules=rules,
+                )
+                if structured:
+                    corrected_text = structured
 
-                corrected_text = structured_translation or tgt_text
+            violations = self.term_validator.validate(
+                src_text=src_seg.text,
+                tgt_text=corrected_text,
+                src_lang=source_lang,
+                tgt_lang=target_lang,
+            )
+
+            if not violations:
+                corrected_segments.append(corrected_text)
+                continue
+
+            total_violations += len(violations)
+            self.validation_metrics["violations_detected"] += len(violations)
+
+            structured_rules = rules or [v.rule for v in violations if v.rule]
+            structured_translation = None
+            if structured_rules:
+                structured_translation = self._translate_with_structured_outputs(
+                    segment=src_seg,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                    rules=structured_rules,
+                )
+
+            if structured_translation:
+                self.validation_metrics["retries_for_terms"] += 1
+                corrected_text = structured_translation
+                violations = self.term_validator.validate(
+                    src_text=src_seg.text,
+                    tgt_text=corrected_text,
+                    src_lang=source_lang,
+                    tgt_lang=target_lang,
+                )
+
+            if violations:
                 corrected_text = self.term_validator.enforce(
                     src_text=src_seg.text,
                     tgt_text=corrected_text,
@@ -1009,8 +1041,26 @@ Translated segments:"""
                     tgt_lang=target_lang,
                     fix_mode="replace",
                 )
-            else:
-                corrected_text = tgt_text
+                self.validation_metrics["enforcements"] += 1
+                remaining = self.term_validator.validate(
+                    src_text=src_seg.text,
+                    tgt_text=corrected_text,
+                    src_lang=source_lang,
+                    tgt_lang=target_lang,
+                )
+                if remaining and self.strict_glossary:
+                    details = ", ".join(
+                        f"{v.type}:{v.rule.src}->{v.rule.tgt}" for v in remaining
+                    )
+                    logger.error(
+                        "Glossary enforcement stuck for %s: %s | text=%s",
+                        src_seg.segment_id,
+                        details,
+                        corrected_text[:120],
+                    )
+                    raise ValueError(
+                        f"Glossary enforcement failed for segment {src_seg.segment_id}"
+                    )
 
             corrected_segments.append(corrected_text)
 

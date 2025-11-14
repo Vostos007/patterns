@@ -50,6 +50,17 @@ htmlcov/
 work/
 output/
 tmp/
+runtime/input/*
+runtime/inter/**
+runtime/tmp/*
+build/
+production_artifacts/
+test_*_output.pdf
+test_enhanced_docx.docx
+test_output.md
+tmp.docx
+!runtime/.gitkeep
+!runtime/**/.gitkeep
 
 # OS
 .DS_Store

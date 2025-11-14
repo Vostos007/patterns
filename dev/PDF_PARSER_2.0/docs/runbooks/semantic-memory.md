@@ -15,9 +15,11 @@
 python3 -m scripts/reindex_semantic_memory \
   --db data/translation_memory.db \
   --target-version 1 \
-  --batch 256
+ --batch 256
 ```
 `DRY RUN`: добавить `--dry-run`.
+
+> `UnifiedPipeline` автоматически резолвит `data/translation_memory.db` относительно каталога `dev/PDF_PARSER_2.0`, поэтому путь работает независимо от того, в каком каталоге вы запускаете скрипты.
 
 ## Переключение на Postgres
 1. В `.env`: `POSTGRES_DSN=postgresql://...`

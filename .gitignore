@@ -3,3 +3,26 @@
 !/to_translate/.gitkeep
 /translations/*
 !/translations/.gitkeep
+
+# Workspace coverage / cache
+/htmlcov/
+/.coverage
+/.pytest_cache/
+/logs/
+/data/translation_memory.db
+
+# Subproject artifacts
+/dev/PDF_PARSER_2.0/htmlcov/
+/dev/PDF_PARSER_2.0/.coverage
+/dev/PDF_PARSER_2.0/.pytest_cache/
+/dev/PDF_PARSER_2.0/runtime/input/*
+/dev/PDF_PARSER_2.0/runtime/inter/**
+/dev/PDF_PARSER_2.0/runtime/tmp/*
+/dev/PDF_PARSER_2.0/build/
+/dev/PDF_PARSER_2.0/production_artifacts/
+/dev/PDF_PARSER_2.0/test_*_output.pdf
+/dev/PDF_PARSER_2.0/tmp.docx
+
+# Keep placeholders and curated samples
+!/dev/PDF_PARSER_2.0/runtime/.gitkeep
+!/dev/PDF_PARSER_2.0/runtime/**/.gitkeep

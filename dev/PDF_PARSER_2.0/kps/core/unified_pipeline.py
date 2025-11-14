@@ -90,6 +90,10 @@ from kps.export.docling_writer import apply_translations
 logger = logging.getLogger(__name__)
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_MEMORY_PATH = PROJECT_ROOT / "data" / "translation_memory.db"
+
+
 class ExtractionMethod(Enum):
     """Метод извлечения контента из документа."""
 
@@ -123,7 +127,7 @@ class PipelineConfig:
 
     # Translation
     memory_type: MemoryType = MemoryType.SEMANTIC
-    memory_path: Optional[str] = "data/translation_memory.db"
+    memory_path: Optional[str] = None
     glossary_path: Optional[str] = "config/glossaries/knitting_custom.yaml"
     enable_few_shot: bool = True
     enable_auto_suggestions: bool = True
@@ -221,6 +225,7 @@ class UnifiedPipeline:
             config: Конфигурация (defaults если None)
         """
         self.config = config or PipelineConfig()
+        self._normalize_paths()
 
         # Инициализация компонентов
         self._init_extractors()
@@ -232,6 +237,22 @@ class UnifiedPipeline:
         self.docling_block_map: Dict[str, object] = {}
 
         logger.info("UnifiedPipeline initialized")
+
+    def _normalize_paths(self) -> None:
+        """Resolve relative paths to actual files inside the project tree."""
+
+        if self.config.memory_type == MemoryType.NONE:
+            return
+
+        memory_path = self.config.memory_path
+        if not memory_path:
+            resolved = DEFAULT_MEMORY_PATH
+        else:
+            maybe_path = Path(memory_path)
+            resolved = maybe_path if maybe_path.is_absolute() else PROJECT_ROOT / maybe_path
+
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        self.config.memory_path = str(resolved)
 
     def _init_extractors(self):
         """Инициализация извлекателей."""
@@ -251,8 +272,7 @@ class UnifiedPipeline:
         if self.config.glossary_path:
             glossary_file = Path(self.config.glossary_path)
             if not glossary_file.is_absolute():
-                project_root = Path(__file__).resolve().parents[2]
-                glossary_file = project_root / glossary_file
+                glossary_file = PROJECT_ROOT / glossary_file
 
             if glossary_file.exists():
                 self.glossary.load_from_yaml(str(glossary_file))

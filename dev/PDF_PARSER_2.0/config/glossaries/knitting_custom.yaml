@@ -594,15 +594,15 @@ measurement:
     protected_tokens: []
   ширина изделия:
     ru: ширина изделия
-    en: garment width / chest width (laid flat)
-    fr: largeur du vêtement (au buste)
-    note: Горизонтальный замер изделия по груди в разложенном виде.
+    en: width of the garment
+    fr: largeur du vêtement
+    note: Горизонтальный замер изделия по груди в разложенном виде (эквивалент обхвату груди изделия в разложенном состоянии).
     protected_tokens: []
   длина по спинке:
     ru: длина по спинке
     en: back length
-    fr: longueur du vêtement (dos)
-    note: Вертикальный замер от горловины по центру спинки до низа.
+    fr: longueur au dos
+    note: Вертикальный замер от горловины по центру спинки до низа (эквивалент длине изделия по спине).
     protected_tokens: []
   пройма / высота проймы:
     ru: пройма / высота проймы
