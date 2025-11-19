@@ -14,8 +14,12 @@ Unified Document Processing Pipeline - единая точка входа.
 from __future__ import annotations
 
 import copy
+import json
 import logging
+import shutil
+import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union, cast
@@ -91,7 +95,9 @@ logger = logging.getLogger(__name__)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = PROJECT_ROOT.parents[1]
 DEFAULT_MEMORY_PATH = PROJECT_ROOT / "data" / "translation_memory.db"
+DEFAULT_PUBLISH_ROOT = (REPO_ROOT / "translations").resolve()
 
 
 class ExtractionMethod(Enum):
@@ -132,7 +138,7 @@ class PipelineConfig:
     enable_few_shot: bool = True
     enable_auto_suggestions: bool = True
     embedding_model: str = "text-embedding-3-small"
-    translation_model: str = "gpt-5-nano"
+    translation_model: str = "gpt-4o-mini"
     translation_fallback_model: Optional[str] = "gpt-4o-mini"
     embedding_batch_size: int = 16
     embedding_timeout: float = 30.0
@@ -157,6 +163,9 @@ class PipelineConfig:
     # Export
     export_formats: List[str] = field(default_factory=lambda: ["idml"])
     style_template: Optional[str] = None  # YAML шаблон стилей
+    publish_outputs: bool = True
+    publish_root: Optional[str] = None
+    reuse_identical_inputs: bool = True
 
 
 @dataclass
@@ -226,6 +235,9 @@ class UnifiedPipeline:
         """
         self.config = config or PipelineConfig()
         self._normalize_paths()
+        self.publish_outputs_enabled = bool(self.config.publish_outputs)
+        self.publish_root = self._resolve_publish_root(self.config.publish_root)
+        self.reuse_identical_inputs = bool(self.config.reuse_identical_inputs)
 
         # Инициализация компонентов
         self._init_extractors()
@@ -237,6 +249,8 @@ class UnifiedPipeline:
         self.docling_block_map: Dict[str, object] = {}
 
         logger.info("UnifiedPipeline initialized")
+        if self.publish_outputs_enabled:
+            logger.info("Canonical output dir: %s", self.publish_root)
 
     def _normalize_paths(self) -> None:
         """Resolve relative paths to actual files inside the project tree."""
@@ -487,8 +501,6 @@ class UnifiedPipeline:
         Returns:
             PipelineResult с результатами обработки
         """
-        import time
-
         start_time = time.time()
 
         input_path = Path(input_file)
@@ -503,6 +515,13 @@ class UnifiedPipeline:
 
         logger.info(f"Processing: {input_path.name}")
         logger.info(f"Target languages: {target_languages}")
+
+        can_publish = bool(run_context and self.publish_outputs_enabled)
+
+        if can_publish and self.reuse_identical_inputs:
+            reused_result = self._try_reuse_outputs(run_context, target_languages)
+            if reused_result:
+                return reused_result
 
         errors = []
         warnings = []
@@ -709,6 +728,15 @@ class UnifiedPipeline:
             warnings=warnings,
         )
 
+        if can_publish and run_context:
+            published_dir = self._publish_outputs(run_context, run_context.output_dir)
+            result.output_files = self._rewrite_output_paths(
+                result.output_files,
+                run_context.output_dir,
+                published_dir,
+            )
+            self._write_manifest(published_dir, run_context, result)
+
         logger.info(f"Processing complete in {processing_time:.1f}s")
         logger.info(f"Cache hit rate: {cache_hit_rate:.0%}")
         logger.info(f"Translation cost: ${total_cost:.4f}")
@@ -757,6 +785,155 @@ class UnifiedPipeline:
             self.docling_document = self.docling_extractor.last_docling_document
             self.docling_block_map = self.docling_extractor.last_block_map.copy()
             return document
+
+    # --- Publishing helpers -------------------------------------------------
+
+    def _resolve_publish_root(self, configured_path: Optional[str]) -> Path:
+        if not self.config.publish_outputs:
+            return DEFAULT_PUBLISH_ROOT
+
+        if configured_path:
+            resolved = Path(configured_path).expanduser().resolve()
+        else:
+            resolved = DEFAULT_PUBLISH_ROOT
+
+        resolved.mkdir(parents=True, exist_ok=True)
+        return resolved
+
+    def _publish_outputs(self, run_context: RunContext, source_dir: Path) -> Path:
+        target_dir = (self.publish_root / run_context.slug / run_context.version).resolve()
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        shutil.copytree(source_dir, target_dir)
+        return target_dir
+
+    def _rewrite_output_paths(
+        self,
+        output_files: Dict[str, Dict[str, str]],
+        original_dir: Path,
+        published_dir: Path,
+    ) -> Dict[str, Dict[str, str]]:
+        rewritten: Dict[str, Dict[str, str]] = {}
+        original_dir = original_dir.resolve()
+        for lang, files in output_files.items():
+            rewritten[lang] = {}
+            for fmt, path_str in files.items():
+                try:
+                    rel_path = Path(path_str).resolve().relative_to(original_dir)
+                except ValueError:
+                    rel_path = Path(path_str).name
+                rewritten[lang][fmt] = str((published_dir / rel_path).resolve())
+        return rewritten
+
+    def _write_manifest(
+        self,
+        published_dir: Path,
+        run_context: RunContext,
+        result: PipelineResult,
+    ) -> None:
+        manifest_path = published_dir / "manifest.json"
+        payload = {
+            "slug": run_context.slug,
+            "version": run_context.version,
+            "source_file": run_context.staged_input.name,
+            "source_hash": run_context.input_hash,
+            "source_language": result.source_language,
+            "extraction_method": result.extraction_method,
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "target_languages": result.target_languages,
+            "output_files": {
+                lang: {
+                    fmt: self._relative_to(published_dir, Path(path))
+                    for fmt, path in files.items()
+                }
+                for lang, files in result.output_files.items()
+            },
+            "stats": {
+                "segments_translated": result.segments_translated,
+                "segments_extracted": result.segments_extracted,
+                "pages_extracted": result.pages_extracted,
+                "cache_hit_rate": result.cache_hit_rate,
+                "translation_cost": result.translation_cost,
+                "processing_time": result.processing_time,
+                "total_input_tokens": result.total_input_tokens,
+                "total_output_tokens": result.total_output_tokens,
+            },
+        }
+        manifest_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    def _relative_to(self, base: Path, target: Path) -> str:
+        try:
+            rel = target.resolve().relative_to(base.resolve())
+        except ValueError:
+            rel = target.name
+        return rel.as_posix()
+
+    def _find_manifest_for_hash(self, slug: str, file_hash: str) -> Optional[dict]:
+        slug_dir = self.publish_root / slug
+        if not slug_dir.exists():
+            return None
+        manifest_paths = sorted(slug_dir.glob("v*/manifest.json"))
+        for manifest_path in reversed(manifest_paths):
+            try:
+                data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if data.get("source_hash") == file_hash:
+                data["__dir__"] = manifest_path.parent
+                return data
+        return None
+
+    def _try_reuse_outputs(
+        self,
+        run_context: RunContext,
+        requested_languages: List[str],
+    ) -> Optional[PipelineResult]:
+        manifest = self._find_manifest_for_hash(run_context.slug, run_context.input_hash)
+        if not manifest:
+            return None
+
+        source_dir = manifest["__dir__"]
+        published_dir = self._publish_outputs(run_context, source_dir)
+        if run_context.output_dir.exists():
+            shutil.rmtree(run_context.output_dir)
+        shutil.copytree(published_dir, run_context.output_dir)
+        output_files = {}
+        for lang, fmt_map in manifest.get("output_files", {}).items():
+            output_files[lang] = {}
+            for fmt, filename in fmt_map.items():
+                output_files[lang][fmt] = str((published_dir / filename).resolve())
+
+        stats = manifest.get("stats", {})
+        result = PipelineResult(
+            source_file=str(run_context.staged_input),
+            source_language=manifest.get("source_language", "unknown"),
+            extraction_method=manifest.get("extraction_method", ExtractionMethod.AUTO.value),
+            pages_extracted=stats.get("pages_extracted", 0),
+            segments_extracted=stats.get("segments_extracted", 0),
+            target_languages=manifest.get("target_languages", requested_languages),
+            segments_translated=stats.get("segments_translated", 0),
+            cache_hit_rate=1.0,
+            glossary_terms_found=0,
+            translation_cost=0.0,
+            output_files=output_files,
+            processing_time=0.0,
+            total_input_tokens=0,
+            total_output_tokens=0,
+            errors=[],
+            warnings=["Reused cached outputs (identical input)"]
+            if manifest.get("version") != run_context.version
+            else [],
+        )
+        self._write_manifest(published_dir, run_context, result)
+        logger.info(
+            "Reused outputs from %s for slug %s (hash match)",
+            manifest.get("version"),
+            run_context.slug,
+        )
+        return result
 
     def _segment_content(self, document: KPSDocument) -> List[TranslationSegment]:
         """

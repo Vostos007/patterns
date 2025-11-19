@@ -28,6 +28,8 @@ import fcntl  # For file locking on Unix
 import tempfile
 
 from kps.core import PipelineConfig, UnifiedPipeline
+from kps.io import IOLayout
+from kps.core.unified_pipeline import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -438,11 +440,18 @@ class DocumentDaemon:
                 try:
                     start_time = time.time()
 
-                    # Run pipeline
+                    layout = IOLayout(
+                        base_root=PROJECT_ROOT / "runtime",
+                        use_tmp=False,
+                        publish_root=getattr(self.pipeline, "publish_root", None),
+                    )
+                    run_context = layout.prepare_run(file_path)
+
                     result = self.pipeline.process(
-                        input_file=file_path,
+                        input_file=run_context.staged_input,
                         target_languages=self.target_languages,
-                        output_dir=self.output,
+                        output_dir=run_context.output_dir,
+                        run_context=run_context,
                     )
 
                     duration = time.time() - start_time

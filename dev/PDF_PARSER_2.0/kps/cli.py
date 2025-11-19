@@ -89,7 +89,11 @@ def translate(
     pipeline = UnifiedPipeline(config)
     if skip_translation_qa:
         pipeline.translation_qa_gate = None
-    layout = IOLayout(base_root=layout_root, use_tmp=use_tmp)
+    layout = IOLayout(
+        base_root=layout_root,
+        use_tmp=use_tmp,
+        publish_root=getattr(pipeline, "publish_root", None),
+    )
     run_context = layout.prepare_run(Path(input_file))
 
     # Process

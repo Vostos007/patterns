@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -12,10 +14,11 @@ from typing import Optional
 from docling_core.types.doc.document import DoclingDocument
 
 
-_SLUG_PATTERN = re.compile(r"[^0-9a-zA-Z_-]+")
+_SLUG_PATTERN = re.compile(r"[^\w-]+", re.UNICODE)
 
 
 def _slugify(value: str) -> str:
+    value = value.replace(os.sep, "-").replace("/", "-")
     slug = _SLUG_PATTERN.sub("-", value.strip())
     slug = slug.strip("-_")
     return slug.lower() or "document"
@@ -29,6 +32,7 @@ class RunContext:
     output_dir: Path
     inter_json_path: Path
     inter_markdown_path: Path
+    input_hash: str
 
     def dump_docling(self, docling_doc: Optional[DoclingDocument]) -> None:
         if docling_doc is None:
@@ -42,7 +46,12 @@ class RunContext:
 class IOLayout:
     """Managed directory layout for input/intermediate/output/tmp."""
 
-    def __init__(self, base_root: Path, use_tmp: bool = False) -> None:
+    def __init__(
+        self,
+        base_root: Path,
+        use_tmp: bool = False,
+        publish_root: Optional[Path] = None,
+    ) -> None:
         base_root = base_root.expanduser()
         if use_tmp:
             timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
@@ -56,6 +65,7 @@ class IOLayout:
         self.inter_json_dir = self.inter_dir / "json"
         self.inter_markdown_dir = self.inter_dir / "markdown"
         self.output_dir = self.root / "output"
+        self.publish_root = publish_root.expanduser().resolve() if publish_root else None
         self._ensure_base_dirs()
 
     def _ensure_base_dirs(self) -> None:
@@ -82,6 +92,7 @@ class IOLayout:
         staged_input = self.stage_input(source)
         slug = _slugify(staged_input.stem)
         version = self._next_version(slug)
+        input_hash = self._hash_file(staged_input)
         output_dir = (self.output_dir / slug / version)
         output_dir.mkdir(parents=True, exist_ok=False)
         inter_json_path = self.inter_json_dir / f"{slug}_{version}.json"
@@ -93,12 +104,22 @@ class IOLayout:
             output_dir=output_dir,
             inter_json_path=inter_json_path,
             inter_markdown_path=inter_markdown_path,
+            input_hash=input_hash,
         )
 
     def _next_version(self, slug: str) -> str:
         slug_dir = self.output_dir / slug
         slug_dir.mkdir(parents=True, exist_ok=True)
         existing = [p.name for p in slug_dir.iterdir() if p.is_dir() and p.name.startswith("v")]
+        if self.publish_root:
+            published_slug_dir = self.publish_root / slug
+            if published_slug_dir.exists():
+                published_versions = [
+                    p.name
+                    for p in published_slug_dir.iterdir()
+                    if p.is_dir() and p.name.startswith("v")
+                ]
+                existing.extend(published_versions)
         numbers = []
         for name in existing:
             try:
@@ -107,6 +128,13 @@ class IOLayout:
                 continue
         next_number = max(numbers) + 1 if numbers else 1
         return f"v{next_number:03d}"
+
+    def _hash_file(self, path: Path) -> str:
+        sha = hashlib.sha256()
+        with open(path, "rb") as handle:
+            while chunk := handle.read(8192):
+                sha.update(chunk)
+        return sha.hexdigest()
 
 
 __all__ = ["IOLayout", "RunContext"]
