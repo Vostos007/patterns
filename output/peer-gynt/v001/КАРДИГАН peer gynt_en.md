@@ -1,0 +1,463 @@
+**CARDIGAN "peer gynt" • Gauge 18×24 • Armhole −1 cm • XS(S)M(L)XL(XXL)
+DESCRIPTION OF KNITTING**
+
+A stylish cardigan with an elegant Japanese shoulder line will be the perfect addition to your wardrobe. Thanks to the seamless knitting technique, it looks impeccable.
+
+The cardigan is knitted in rows from top to bottom, using classic Stockinette stitch, which gives the product lightness and sophistication. The sleeves are worked from the armhole to the cuff in the round with neat decreases.
+
+The finishing elements – the band, cuffs, hem, and neckline – are made with ribbing 1×1, which gives the cardigan an elegant, polished look.
+
+**Dimensions:**
+
+XS (38-40) – bust circumference 75-80 cm
+
+S (42-44) – bust circumference 82-88 cm
+
+M (46-48) – bust circumference 90-98 cm
+
+L (50-52) – bust circumference 100-108 cm
+
+XL (54-56) – bust circumference 110 -120 cm
+
+XXL (58-60) – bust circumference 120 -130 cm
+
+**Materials and tools:**
+
+- Circular needles 4,5 mm for main knitting, 4.0 mm for cuff ribbing and placket.
+- Stitch markers, needle, measuring tape, waste yarn or additional cord, row counter, 6 buttons.
+
+Recommended yarn and consumption: Sandnes Garn Peer Gynt 100% wool (91m/50gr).  
+Consumption 10/11/12/13/14/15 skeins;
+
+**Gauge:**
+
+**18 stitches * 24 rounds** in stockinette stitch in a square 10*10 cm after blocking.
+
+The dimensions of the finished product are indicated in the table:
+
+|     | Обхват груди, см   | Ширина изделия, см   | Длина по спинке, см   | Пройма, см   | Длина рукава от горловины, см   | Резинка по низу, манжета/планка, обвязка горловины, см   | Ширина горловины, см   | Ширина рукава у запястья, см   |
+|-----|--------------------|----------------------|-----------------------|--------------|---------------------------------|----------------------------------------------------------|------------------------|--------------------------------|
+|     |                    | A                    | B                     | C            | D                               | E                                                        | G                      | F                              |
+| XS  | 75-80              | 52-54                | 52                    | 20           | 64                              | 6-7/3                                                    | 19                     | 9                              |
+| S   | 82-88              | 54-56                | 55                    | 21           | 65                              | 6-7/3                                                    | 19                     | 9                              |
+| M   | 90-98              | 60-62                | 58                    | 22           | 67                              | 6-7/3                                                    | 20                     | 10                             |
+| L   | 100-108            | 65-69                | 62                    | 24           | 69                              | 6-7/3                                                    | 22                     | 10                             |
+| XL  | 110-120            | 73-75                | 65                    | 26           | 71                              | 6-7/3                                                    | 23                     | 11                             |
+| XXL | 120-130            | 79-82                | 67                    | 27           | 71                              | 6-7/3                                                    | 23                     | 11                             |
+
+<!-- image -->
+
+**Addition:**
+
+Main pattern - stockinette stitch.
+
+In circular knitting, all stitches in both knit and purl rounds are knitted as knit stitches. In flat knitting - all stitches in knit rows are knitted as knit stitches. In purl rows - as purl stitches.
+
+Important! To facilitate the Cast on for subsequent work with the sleeves and neckline, knit the edge stitches! In the right-side rows, we knit the edge stitches as knit stitches, and in the wrong-side rows – as Purl stitches.
+
+Increases on the slopes and neckline are made from yarn overs, knitted as twisted knit stitches in knit rows and twisted purl stitches in purl rows.
+
+Ribbing 1*1 - alternate 1 knit, 1 purl until the end of the row.
+
+Ribbing 1*1 on the sleeves ends with 2 rows of hollow ribbing (1 row - knit the knit stitch (yarn behind work), purl 2 row - knit as knit stitch, purl slip (yarn in front of work).
+
+Ribbing for the bottom of the item and bands 1*1 ends with hollow ribbing (1 and 2 round – k slip (yarn in back), p.).
+
+Stitches are closed with a needle.
+
+**Legend:**
+
+k – knit stitch
+
+p – purl stitch
+
+r. - round
+
+ssk – 2 knit the stitches together through the front with a left-leaning decrease k2tog
+
+k2tog – 2 petli provyazat' vmeste litsovoy s naklonov vpravo ssk
+
+selv. – selvage stitch
+
+m1L – make 1 left-leaning increase from the strand
+
+PrLP – add 1 k with a right tilt from the stretch
+
+PRIP – add p with a right tilt from the stretch
+
+PrIL – add 1 p with a left tilt from the stretch.
+NPR – thread before work
+NZR – thread after work **Work progress:**
+
+**Back.**
+
+Cast on 26(28)30(32)34(34) stitches (including edge stitches) in the usual way. Knit the setup round with purl stitches. **Slants.**
+
+We are starting to shape the shoulder slopes on the back.
+
+1 round (k): 3 k., PrL, knit all k stitches until there are 3 stitches left on the needle, PrL, 3 k.
+
+2 round (p): 3 p, Purl, we knit all stitches purl until there are 3 stitches left on the needle, Purl, 3 p.
+
+A total of 24/25/28/31/34/38 increases from each side. In size XS, knit the last purl round without changes. After all increases on the needles 74/78/86/94/102/110 stitches. The slopes are finished.
+
+**Armholes.**
+
+We begin knitting the armholes.
+
+To start, knit straight in stockinette stitch 18/20/22/22/22/22 rounds.
+
+**Next, we proceed to the increases.**
+
+**1 group of increases:**
+
+1 round (k.): 3 k, ssk, knit k all stitches until there are 3 stitches left on the needle, k2tog, 3 k.
+
+2 round (p.) - all stitches p.
+
+3 round – all k.
+
+4 round – all p.
+
+The number of stitches on the needles 76/80/88/96/104/112
+
+**1 group of increases:**
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+The number of stitches on the needles 80/84/92/100/108/116.
+
+**1 group of increases:**
+
+We add 1 stitch from both sides in each row.
+
+1 round (k): 3 k., PrL, knit all k stitches until there are 3 stitches left on the needle, PrL, 3 k.
+
+10 row (p): 3 p., PrIP, knit purl all stitches until there are 3 stitches left on the needle, PrIL, 3 p.
+
+Next, repeat rows 9 and 10 1 times for sizes XS, S, M – a total of 12 rows and 2 times for sizes L, XL, XXL – a total of 14 rows.
+
+On the needles 88/92/100/112/120/128 sts. The upper part of the back is ready, cut the working yarn.
+
+**Front.**
+
+**Right side of the front.**
+
+Start knitting from a new ball of yarn. Position the back with the right side facing you and pick up stitches along the slope from the armhole to the neckline (from right to left). Pick up 1 stitch from each row + 1 stitch from the straight part of the armhole. Total: 24/25/29/32/35/38 sts.
+
+Setup row (wrong side) – knit all stitches purl.
+
+1 row (of stitches): 3 st., k2tog, then knit all remaining stitches. ssk
+
+2 row (p): knit all stitches p.
+
+3 row: knit all stitches k.
+
+4 row: all stitches p.
+
+Repeat rows from 1 to 4-th 3 times for all sizes (total 16 r.), on needles 20/21/25/28/31/34 stitches.
+
+**Next, we begin to shape the neckline.**
+
+17 row (k): 3 k., ssk, continue to knit all stitches k until there are 3 stitches left on the left needle, k2tog, 3 k.
+
+2 row (p): knit all stitches p.
+
+19 row (k): all stitches k until there are 3 stitches left on the left needle, k2tog, 3 k.
+
+2 row (p): knit all stitches p.
+
+Repeat rows from 17 to 20-th one more time. Total 24 r.
+
+On needles 22/23/27/30/33/36 st.
+
+25 row (k.): 3 k., ssk, continue to knit all stitches k until there are 3 stitches left on the left needle, k2tog, 3 k.
+
+26 round (p.): 3 p., inc, then all stitches p. until the end of the round.
+
+27 round (k.) all stitches k., until there are 3 stitches left on the left needle, k2tog, 3 k.
+
+26 round (p.): 3 p., inc, then all stitches p. until the end of the round.
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+Repeat rounds from 29 to 30-th one more time for sizes XS, S, M and 2 times for sizes L, XL, XXL.
+
+Total 32/32/32/34/34/34 round. On the needles 29/30/34/39/42/45 stitches.
+
+On 33/33/33/35/35/35 round knit all stitches k. until there are 3 st. left on the needles, **make an increase from the yarn over to the right** , 3 k, cast on 8/8/9/9/10/10 stitches using additional Thread (consider this round as the first). Then knit 17(19)21(21)21(21) rounds → a total of 18/20/22/22/22/22 rounds in total.
+
+On the needles 38/39/44/49/53/56 stitches.
+
+Next, make increases similar to the increases at the armhole of the back.
+
+**1 group of increases:**
+
+1 round (k): 3 k, ssk, knit k all stitches to the end of the round
+
+2 round (p) - all stitches p.
+
+3 round – all k.
+
+4 round – all p.
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+**1 group of increases:**
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+**1 group of increases:**
+
+We add 1 stitch in each row.
+
+9 row (k.): 3 k., ssk, knit k all stitches to the end of the row.
+
+10 row (p.): knit all stitches p until there are 3 st. left on the needles, k2tog, 3 p.
+
+Then repeat rows 9 and 10 1 more times for all sizes XS, S, M – a total of 12 rows and 2 times for sizes L, XL, XXL – a total of 14 rows.
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+Cut the working yarn.
+
+**Left side of the front.**
+
+We start knitting from a new skein. Place the back with the right side facing you and pick up stitches along the slope from the neckline to the armhole (from right to left). From each row, pick up 1 stitch + 1 stitch from the straight part of the armhole. Total: 24/25/29/32/35/38 sts.
+
+Setup row (purl side) - knit all stitches purl.
+
+Next come the decreases. Pins
+
+1 round (k): knit all stitches k until there are 5 stitches left on the needles, k2tog, 3 k. ssk
+
+2 row (purl): knit all stitches p.
+
+3 row: knit all stitches k.
+
+4 row: all stitches p.
+
+Repeat rows from 1 to 4-th 3 times for all sizes (total 16 r.), on needles 20/21/25/28/31/34 stitches.
+
+Next, we begin to shape the neckline.
+
+17 round (k): 3 k, ssk, then knit all stitches k until there are 5 st. left on the left needle, k2tog, 3 k.
+
+2 row (purl): knit all stitches p.
+
+19 round (k): 3 k, ssk, all other stitches k.
+
+2 row (purl): knit all stitches p.
+
+Repeat rounds from 17 to 20 once more. Total 24 rounds. On the needles 22/23/27/30/33/36 st.
+
+17 round (k): 3 k, ssk, then knit all stitches k until there are 5 st. left on the left needle, k2tog, 3 k.
+
+26 round (p): all stitches p. until there are 3 st. left on the needles, ssk, 3 p.
+
+27 round (k): 3 k, ssk, all stitches k until the end of the round.
+
+28 round (p): all stitches p. until there are 3 st. left, ssk, 3 p.
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+Repeat rows from 29 to 30-th one more time for sizes XS, S, M and 2 times for sizes L, XL, XXL. In total 32/32/32/34/34/34 rows. On the needles 29/30/34/39/42/45 stitches.
+
+On 32/32/32/34/34/34 row, at the end of the series, cast on 8/8/9/9/10/10 chains with the help of additional Thread. On 33/33/33/35/35/35 row, knit the cast-on chains k, 3 k, **k2tog** , all remaining stitches k (consider this row as the first).
+
+Next, knit another 17(19)21(21)21(21) rows → in total knit straight for 18/20/22/22/22/22 rows.
+
+On the needles 38/39/44/49/53/56 stitches.
+
+Next, make increases similar to the increases at the armhole of the back.
+
+**1 group of increases:**
+
+1 round (k): 3 k, ssk, knit k all stitches to the end of the round
+
+2 round (p) - all stitches p.
+
+3 round – all k.
+
+4 round – all p.
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+**1 group of increases:**
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+5 round – like 1-th
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+**1 group of increases:**
+
+We add 1 stitch in each row.
+
+9 row (k.): 3 k., ssk, knit k all stitches to the end of the row.
+
+10 row (p.): knit all stitches p until there are 3 st. left on the needles, k2tog, 3 p.
+
+Then repeat rows 9 and 10 1 more times for all sizes XS, S, M – a total of 12 rows and 2 times for sizes L, XL, XXL – a total of 14 rows.
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+Do not cut the working yarn.
+
+**Joining the front pieces and the back.**
+
+**Edge stitches in knit rows are knitted k, in purl rows p.**
+
+1 row: Knit the stitches of the left front, cast on 4/4/6/6/8/8 chain stitches, knit the stitches of the back, then cast on 4/4/6/6/8/8 chain stitches for the next underarm and the stitches of the right front. In the middle of the stitches of both underarms, place stitch markers (consider this row as the first).
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+Knit in flat rows from 2 - 6 row.
+
+Make decreases in 7-m on both sides of the stitch markers as follows: knit stitches of the left front, not knitting 3 stitches to the stitch marker at the middle of the first underarm, ssk, 1 knit, stitch marker, 1 knit, k2tog, knit stitches of the back not knitting 3 stitches to the stitch marker at the middle of the second underarm, ssk, 1 knit, stitch marker, 1 knit, k2tog, knit to the end of the row. Pins
+
+Make more 2/2/3/3/4/4 decreases in each m row (front row). Pins
+
+***The round in which the first decreases are made is considered the 1st. Thus, the following decreases should be made in the 2nd, 3rd, 4th, etc. rounds. Pins**
+
+The number of stitches on the needles 39/40/45/50/54/57 p.
+
+In total, knit 65(67)72(73)75(75) rows. Change the needles to 4 mm. Knit ribbing 1*1 17 rows and 2 rows of hollow ribbing (1 and 2 row – k, p).
+
+Bind off the loops with a needle.
+
+**Sleeves.**
+
+Join a new thread at the center of the undercut, and with the needles, we begin to lift stitches with the main size of needles (mm): from the stitches of the undercut 2/2/3/3/4/4 stitches. Next, adhere to the main rhythm of the cast on: from four rows, we cast on 3 stitches (3 stitches lifted, 1 skipped).
+
+Total on the needles 78/80/84/88/92/96 stitches.
+
+Shape the sleeve cap using short rows with a step of 2 stitches. You can use any method that is convenient for you, for example, the German method of short rows.
+
+Video German method of short rows:
+
+https://youtu.be/z-E3YSHPQYs?si=5xvmYK0-iF1ek3Wl
+
+During the knitting of the first short row, divide the stitches into two parts, marking the beginning of the row (in the center of the underarm) and the middle of the sleeve cap with stitch markers: from the beginning of the row marker, count 39/40/42/44/46/48 stitches to the top of the sleeve marker, 39/40/42/44/46/48 p.
+
+Short row 1 (k): MNR, 39/40/42/44/46/48 k, place the stitch marker, 16/16/17/18/19/20 k, turn the work to the purl side.
+
+Short row 2 (p): remove the loop, pull the thread back until "legs" appear, knit in the reverse direction to the stitch marker at the shoulder peak, transfer the stitch marker, p, turn the knitting to the front side.
+
+Short row 1 (k): remove the loop, pull the thread forward until the "legs" appear, knit k to the stitch marker at the top, 15/15/16/17/18/19 k, knit the "legs", 2 k, turn the work.
+
+Short row 2 (p): remove the loop, pull the thread back until the "legs" appear, knit in the opposite direction until the opposite "legs" appear, knit them as Purl from the back, p, turn the knitting.
+
+Continue knitting with turns, adding 2 stitches each time, until there are 1-2 stitches left on the needles before the stitch marker. After that, switch to circular knitting.
+
+**Transitioning from flat knitting to circular knitting:**
+
+Knit 6 rounds in the round with knit stitches. Next, a round with decreases.
+
+Round with decreases: K, 1 k2tog, knit until there are 3 stitches left before the Stitch marker, ssk, 1 k. A total of 2 stitches decreased.
+
+Next, 6 rows in the round with the front side. Make decreases. Pins
+
+Continue to make decreases in each 8-th row. Knit to the required length, finish with ribbing 15 rows, 2 rows of hollow ribbing, bind off with a needle. Pins
+
+Knit the second sleeve in the same way.
+
+**Neckline binding.**
+
+Cast on stitches on needles 4 mm. The knitting is positioned towards you with the right side facing. From the chain of air stitches of the left front piece, cast on at the 1-th stitch (8/8/9/9/10/10), then from the left front piece, pick up stitches with a step of 3/1 (3 stitches to be picked up, 1 stitch to be skipped), from the back – from each stitch. From the right front piece, we pick up stitches with a step of 3/1. 
+The total number of stitches must be odd.
+
+Video of lifting stitches with step/skipping stitches:
+
+**https://youtu.be/z-E3YSHPQYs?si=5xvmYK0-iF1ek3Wl**
+
+Knit the setup p round: knit the edge stitches as Purl in p rounds and as knit in knit rounds. P round: edge stitch, then knit an odd number of stitches in ribbing 1*1, edge stitch. Knit ribbing 1*1 for another 7 rounds. Next, we knit 2 setup rounds in hollow ribbing before closing with a needle. The last 10 round – closing with a needle.
+
+<!-- image -->
+
+**Strips.** The buttons will be located on the left shelf, and the buttonholes on the right. The work is done from the bottom of the cardigan, moving up to the neckline. Raise one stitch for each round (as shown in the picture or video). It is necessary for the number of rounds of the cardigan and the band to match. *Translated segments:* **Video of lifting the stitches of the bar:** [https://youtu.be/z-E3YSHPQYs?si=5xvmYK0-iF1ek3Wl](https:/youtu.be/TaqZfZJNoCw?si=ZK7g_E8L-T5RaNmL)
+
+**Work progress:** On needles 4 mm with a long cable, raise 1 p from each stitch along the edge of the left front.
+
+The final number of stitches will depend on the length of the cardigan.
+
+Cut the thread leaving 10-15 cm.
+
+Before starting work, mark the locations of the 5 stitch markers on.
+
+On the left side of the front. The lower button should be located 3.5-4 cm from the edge of the elastic, and the upper button should be located 3 cm from the edge of the neckline. Place the other stitch markers.
+
+so that there is an equal distance between the buttons. You will find the description of the buttonhole work below.
+
+Join the yarn and cast on 15 new stitches on the same needle as the stitches along the edges of the front panels,\n
+
+using the Italian cast-on method. The first and last stitches of the cast-on will be purl stitches.\n
+
+The front band is knitted in turn rounds with a double ribbing, where in the knit rounds\n
+
+the last of the 15 stitches is knitted together with the corresponding stitch from the cast-on\n
+
+along the edge of the shelf. For knitting the band, additional double-pointed needles are used. **We knit the band on the right front panel:\n** 1. Turn the work to the purl side, with the needle in your right hand, cast on 15 stitches using the Italian method.\n2. Turn the work to the knit side. Take the additional needle.\n3. 1 round (knit): *1 k, 1 slip the stitch purlwise*, alternate this until there are 1 stitches left on the left needle. Knit it together with the previously lifted stitch on the band as a knit stitch, turn the work to the purl side.\n4. 2 round (purl): slip the stitch purlwise, *1 k, 1 slip the stitch purlwise* do not knit the last stitch in this round. Turn the work to the knit side.\n5. Continue alternating point 3 and 4 until the end of the panel. Don’t forget that on the right front panel we make buttonholes.\n6. Bind off stitches from the knit side, using the Italian method. When there are 2 last stitches left (knit them together\n
+
+as a knit stitch through the back loop).\n **We knit the band on the left front panel:\n** 1. Work on the knit side. Cast on 15 stitches on the right needle using the Italian method.\n2. Turn the work to the purl side. Take the additional needle.\n3. 1 round (purl): *1 k, 1 slip the stitch purlwise*, alternate this until there are 1 stitches left on the left needle. Knit it together with the previously lifted stitch on the band as a purl stitch, turn the work to the knit side.\n4. 2 round (knit): slip the stitch knitwise, *1 k, 1 slip the stitch purlwise*, do not knit the last stitch in this round. Turn the work to the purl side.\n5. Alternate point 3 and 4 until the end of the panel. There are no buttonholes on the left band. Knit until the end of the panel.\n6. Bind off stitches from the knit side, using the Italian method. When there are 2 last stitches left (knit them together
+
+as a knit stitch through the back loop).\n **Video of the Cast on Italian method and knitting the band:** https://youtu.be/z-E3YSHPQYs?si=5xvmYK0-iF1ek3Wl
+
+**Buttonholes.**
+
+Buttonholes are formed by dividing the fabric of the placket into two parts and knitting them separately.
+
+these sides (see video https://www.youtube.com/watch?v=Ir28MBj0qJk). Starting work on the loop – at the point where you previously placed the Stitch marker.
+
+Divide the strip into 2 parts: 1 part = 8 stitches, 2 part = 7 stitches. **We are knitting 1 part:**
+
+1. p (k): * 1 k, 1 remove the loop NRP *, repeat * - * 4 times. Turn the knitting.
+
+2. P (Purl): * 1 k, 1 remove loop NRP *, repeat * - * 4 times. Turn the knitting.
+
+Repeat 1 - 2 rows 3 times (i.e., knit a total of 6 rows). If you want to make the stitches larger, knit 8 rows.
+
+Next, knit a knit row once more, so that the working yarn is in the middle of the stitches of the band. Cut the yarn.
+
+Now knit 2 part of the band on the remaining 7 stitches. 
+Join a new yarn and **knit 2 part of the band:**
+
+1. p (knit): * 1 k, 1 slip 1 st purlwise *, repeat from * to * 3 times. Knit 2 together knitwise (i.e., the last of 7 p from the column and the lifted stitch from the front). Turn the work to the purl side.
+2. p (purl): *slip 1 stitch purlwise, 1 k *, repeat from * to *,
+
+the last stitch in this row should be slipped without knitting purlwise. Turn the knitting to the knit side.
+Repeat 1 - 2 rows 3 times (a total of 6 rows knitted).
+
+Knit 1 row (knit) once more connecting the stitches of the band with the lifted stitches from the front. The next row will be purl, where we will close the buttonhole and continue to knit the band.
+
+Joining the parts of the band:
+
+1. p (purl): * slip 1 stitch purlwise, 1 k*, repeat from * to *, the last stitch in this row should be slipped without knitting purlwise. Turn the knitting.
+1 buttonhole stitch is ready, the next row is knit.
+
+The end of the thread remains at the top of the loop, it needs to be carefully tucked inside the knitting.
+
+Video of buttonholes: https://www.youtube.com/watch?v=Ir28MBj0qJk
